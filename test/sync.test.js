@@ -2,7 +2,6 @@
 // Uses a local DHT testnet so nothing touches the public network.
 
 const test = require('brittle')
-const Corestore = require('corestore')
 const createTestnet = require('hyperdht/testnet')
 
 const { SwarmStore, openStore, shouldOverwrite } = require('../src/sync')
