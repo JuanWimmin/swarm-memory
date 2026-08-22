@@ -1,0 +1,8 @@
+.claude/
+PLAN.md
+TEAM_PLAN.md
+docs/
+web/mock-graph.json
+deployment/
+out/
+package-lock.json
