@@ -4,7 +4,7 @@
   "description": "P2P team memory for smart-contract projects. Shared knowledge graph over the swarm, installed and updated via Pear.",
   "private": true,
   "bin": "bin.mjs",
-  "upgrade": "pear://ahyzbzb5e9ygktrbear7xzjb3t6qaa4p6atekuof4krj9mtt38co",
+  "upgrade": "pear://aojgk7heyoi1so1m8pe8mnmf8p3ryph9ypi88rmc6gemttexro4o",
   "scripts": {
     "format": "prettier . --write",
     "test": "brittle-bare test/index.js",
