@@ -1,0 +1,102 @@
+name: Seed (CI-owned pear link + seeder)
+
+# Fallback seeder: a GitHub-hosted runner owns a pear link (keypair persisted in the
+# Actions cache), stages the latest by-arch build to it and seeds for up to ~5h50m.
+# Re-dispatch (or let the cron overlap) to keep it seeded through judging.
+on:
+  workflow_dispatch:
+    inputs:
+      seed_minutes:
+        description: 'How long to seed (max ~345)'
+        required: false
+        default: '340'
+      stage:
+        description: 'Stage the latest successful Build by-arch artifact before seeding'
+        required: false
+        default: 'true'
+  schedule:
+    - cron: '20 */5 * * *'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    env:
+      PEAR_STORE: /home/runner/.config/pear
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Restore pear storage (keypair + staged drive)
+        id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: /home/runner/.config/pear
+          key: pear-store-${{ github.run_id }}
+          restore-keys: |
+            pear-store-
+
+      - name: Install Pear CLI
+        run: |
+          npm i -g pear
+          pear versions
+          echo "--- storage dir after first run ---"
+          ls -la "$PEAR_STORE" || true
+
+      - name: Ensure link (reuse persisted one, else pear touch)
+        id: link
+        run: |
+          LINK_FILE="$PEAR_STORE/swarm-memory-link.txt"
+          if [ -s "$LINK_FILE" ]; then
+            LINK=$(cat "$LINK_FILE")
+            echo "Reusing persisted link: $LINK"
+          else
+            pear touch --json | tee touch.json
+            LINK=$(node -e "const l=require('fs').readFileSync('touch.json','utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse).find(x=>x.data&&x.data.link);console.log(l.data.link)")
+            mkdir -p "$PEAR_STORE" && echo "$LINK" > "$LINK_FILE"
+            echo "::notice title=New pear link::$LINK"
+          fi
+          echo "link=$LINK" >> "$GITHUB_OUTPUT"
+          echo "PEAR_LINK=$LINK" >> "$GITHUB_ENV"
+          echo "LINK=$LINK"
+
+      - name: Download latest successful Build by-arch artifact
+        if: ${{ github.event.inputs.stage != 'false' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN=$(gh run list -R "$GITHUB_REPOSITORY" -w build.yaml --status success -L 1 --json databaseId -q '.[0].databaseId')
+          echo "Build run: $RUN"
+          gh run download "$RUN" -R "$GITHUB_REPOSITORY" -n by-arch -D tmp-art
+          mkdir -p deployment && tar -xzf tmp-art/by-arch.tar.gz -C deployment
+          find deployment -type f | sed 's/^/  /'
+          node -p "const p=require('./deployment/package.json'); 'deployment: '+p.name+' v'+p.version+' upgrade='+p.upgrade"
+
+      - name: Stage deployment to link
+        if: ${{ github.event.inputs.stage != 'false' }}
+        run: |
+          pear stage --dry-run "$PEAR_LINK" ./deployment
+          pear stage "$PEAR_LINK" ./deployment
+          pear info "$PEAR_LINK"
+
+      - name: Seed
+        run: |
+          MIN="${{ github.event.inputs.seed_minutes || '340' }}"
+          echo "Seeding $PEAR_LINK for $MIN minutes"
+          timeout "${MIN}m" pear seed --no-tty "$PEAR_LINK" || echo "seed ended (timeout/exit $?)"
+
+      - name: Shutdown sidecar before caching storage
+        if: always()
+        run: pear sidecar shutdown || true
+
+      - name: Save pear storage
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: /home/runner/.config/pear
+          key: pear-store-${{ github.run_id }}
