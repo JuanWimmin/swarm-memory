@@ -1,7 +1,7 @@
 name: Seed (CI-owned pear link + seeder)
 
 # Fallback seeder: a GitHub-hosted runner owns a pear link (keypair persisted in the
-# Actions cache), stages the latest by-arch build to it and seeds for up to ~5h50m.
+# Actions cache), stages the latest by-arch build to it and seeds for up to ~5h40m.
 # Re-dispatch (or let the cron overlap) to keep it seeded through judging.
 on:
   workflow_dispatch:
@@ -45,7 +45,7 @@ jobs:
         run: |
           npm i -g pear
           pear versions
-          echo "--- storage dir after first run ---"
+          echo "--- storage dir ---"
           ls -la "$PEAR_STORE" || true
 
       - name: Ensure link (reuse persisted one, else pear touch)
@@ -57,13 +57,25 @@ jobs:
             echo "Reusing persisted link: $LINK"
           else
             pear touch --json | tee touch.json
-            LINK=$(node -e "const l=require('fs').readFileSync('touch.json','utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse).find(x=>x.data&&x.data.link);console.log(l.data.link)")
+            LINK=$(node -e "const NL=String.fromCharCode(10);const l=require('fs').readFileSync('touch.json','utf8').split(NL).map(s=>s.trim()).filter(Boolean).map(JSON.parse).find(x=>x.data&&x.data.link);console.log(l.data.link)")
             mkdir -p "$PEAR_STORE" && echo "$LINK" > "$LINK_FILE"
             echo "::notice title=New pear link::$LINK"
           fi
           echo "link=$LINK" >> "$GITHUB_OUTPUT"
           echo "PEAR_LINK=$LINK" >> "$GITHUB_ENV"
+          echo "$LINK" > ci-link.txt
+          echo "## SwarmMemory pear link" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "$LINK" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
           echo "LINK=$LINK"
+
+      - name: Publish link as artifact (available while the job is still seeding)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pear-link-${{ github.run_id }}
+          path: ci-link.txt
+          retention-days: 3
 
       - name: Download latest successful Build by-arch artifact
         if: ${{ github.event.inputs.stage != 'false' }}
@@ -82,7 +94,11 @@ jobs:
         run: |
           pear stage --dry-run "$PEAR_LINK" ./deployment
           pear stage "$PEAR_LINK" ./deployment
-          pear info "$PEAR_LINK"
+          pear info "$PEAR_LINK" | tee pear-info.txt
+          echo "## pear info" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat pear-info.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Seed
         run: |
