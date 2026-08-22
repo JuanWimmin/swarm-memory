@@ -13,12 +13,12 @@
 | --- | --- |
 | App / bin name | `swarm-memory` (`package.json` `name`, `"bin": "bin.mjs"` → installed binary `swarm-memory.exe` on Windows, `swarm-memory` on macOS/Linux) |
 | Template | `holepunchto/hello-pear-bare`, branch **`main`** (OTA updater in a Bare worker thread) |
-| **Link (upgrade drive)** | `pear://aojgk7heyoi1so1m8pe8mnmf8p3ryph9ypi88rmc6gemttexro4o` = `package.json` `upgrade`. Minted with `pear touch` on B1's Windows box (commit `6443803`). |
-| Retired link | `pear://ahyzbzb5e9ygktrbear7xzjb3t6qaa4p6atekuof4krj9mtt38co` (commit `771dc8c`, replaced by `6443803`). `pear info` on it prints `[ Empty ]`. Never stage, seed or publish it. |
+| **Link (upgrade drive)** | `pear://amu47syduoenxojzur88fi5sq3ohqtwg6fms4bfuonag3h1d9r1o` = `package.json` `upgrade` (commit `985f850`). Minted by `pear touch` **inside GitHub Actions** (`.github/workflows/seed.yaml`); the writer keypair lives in the Actions cache `pear-store-*`. Verified installable from a clean machine in 5 s. |
+| Retired links | `pear://ahyzbzb5e9yg…` (never writable here) and `pear://aojgk7heyoi1so1m8pe8mnmf8p3ryph9ypi88rmc6gemttexro4o` (minted on B1 box; **unreachable** — see Seeder row). `pear info` on either prints `[ Empty ]` from outside. Never stage, seed or publish them. |
 | Drive state (2026-08-22 17:11, B1 clock UTC-5) | `pear info` → `version 0.1.0`, `length 3`, `fork 0`, verlink `pear://0.3.aojgk7he…`; `pear dump --list` → `/package.json`, `/by-arch/win32-x64/app/swarm-memory.exe` (56.8 MB). Local tree already at `0.1.1` (not staged yet). |
 | Dev host | Windows 11. `pear` = npm wrapper `pear@3.0.0` → `%LOCALAPPDATA%\Programs\pear\pear.exe`. Platform data: `%APPDATA%\pear\` (`corestores/`, `db/`, `gc/`, `pear.log`) — verified on disk; `%LOCALAPPDATA%\pear` does not exist. |
-| Writer key | **Machine-bound** (docs: "Staged and provisioned drives are machine-bound"). Only B1's Windows user profile can `pear stage` this link. If the profile is lost: `pear touch` again, re-point `upgrade`, rebuild, restage, reseed. |
-| Seeder | B1's machine (`pear seed`), must stay up until ~17:00 ART Sunday. Observed `firewalled true` — plan a second seeder / hotspot (§5). |
+| Writer key | **Machine-bound** (docs: "Staged and provisioned drives are machine-bound"). For the live link that machine is the GitHub runner whose `~/.config/pear` we persist in the Actions cache. Only one job may stage at a time (§5b) or the drive forks. If the cache is lost: `pear touch` again, re-point `upgrade`, rebuild, restage, reseed. |
+| Seeder | **GitHub Actions** (`seed.yaml`, ~5h40m per run, cron every 5h). B1 box **cannot** seed: public IP 168.176.40.145 (university network), hyperdht reports `firewalled true` with random NAT — `pear install` timed out at 30 s, 120 s and 300 s, from the box itself and from a GitHub runner. Preferred for judging day: a teammate at home or a VPS (`docs/SEEDER.md`). |
 | Judges | `pear install pear://<key>` needs `/by-arch/<their-platform>-<arch>/app/swarm-memory[.exe]` in the drive. Today only `win32-x64` is staged → §8. |
 
 Link anatomy: a **versioned link** is `pear://<fork>.<length>.<key>` (docs, manual-deployment/deployment: "A versioned link has the form `pear://<fork>.<length>.<key>`"). `length` is the number of blocks in the drive's metadata Hypercore; every `pear stage` that writes something appends blocks (docs, troubleshooting: "Staging ends by printing the new `Latest` length and the post-stage versioned link"). Installed copies do **not** compare lengths — they compare `package.json` `version` (semver) — see §7.
@@ -26,8 +26,8 @@ Link anatomy: a **versioned link** is `pear://<fork>.<length>.<key>` (docs, manu
 ## 1. One-time setup (DONE — do not repeat)
 
 ```sh
-pear touch                                  # → pear://aojgk7heyoi1so1m8pe8mnmf8p3ryph9ypi88rmc6gemttexro4o
-npm pkg set upgrade=pear://aojgk7heyoi1so1m8pe8mnmf8p3ryph9ypi88rmc6gemttexro4o
+pear touch                                  # → pear://amu47syduoenxojzur88fi5sq3ohqtwg6fms4bfuonag3h1d9r1o   (run in CI, see 5b)
+npm pkg set upgrade=pear://amu47syduoenxojzur88fi5sq3ohqtwg6fms4bfuonag3h1d9r1o
 npm start                                   # must print "CLI ready" and NO INVALID_URL
 ```
 
@@ -290,7 +290,9 @@ Caveats:
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-08-22 ~16:29 | 0.1.0 | `pear://0.3.aojgk7he…` | win32-x64 | not recorded | n/a (first stage) | first stage after `pear touch` on B1 box (commit `6443803`) |
 | 2026-08-22 17:06 | 0.1.1 | _pending — deployment built, not staged at 17:11_ | win32-x64 (local) | _pending_ | _pending — first OTA test 0.1.0 → 0.1.1_ | commit `059edf8` "bump 0.1.1 for first OTA test" |
-|  |  |  |  |  |  |  |
+| 2026-08-22 17:29 | 0.1.1 | `pear://0.6.nna7ykdz…` | win32-x64 | **PASS — 5 s** (GitHub windows runner, run `32603016008`) | n/a | first CI-owned link; B1 box still cannot install (local network) |
+| 2026-08-22 17:48 | 0.1.1 (upgrade→nna7yk) | staged by `seed.yaml` run `32603385257` | 6 arches (CI `by-arch`) | PASS | n/a | first stage where the embedded upgrade link is the reachable one |
+| 2026-08-22 ~18:05 | 0.1.2 | _see `ota-test.yaml` run_ | 6 arches | PASS | _OTA 0.1.1 → 0.1.2 under test_ | publisher+installer run in parallel on CI |
 
 ## 10. Troubleshooting
 

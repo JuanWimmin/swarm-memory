@@ -1,19 +1,31 @@
-name: Seed (CI-owned pear link + seeder)
+name: Seed (owns the pear link, stages releases, seeds)
 
-# Fallback seeder: a GitHub-hosted runner owns a pear link (keypair persisted in the
-# Actions cache), stages the latest by-arch build to it and seeds for up to ~5h40m.
-# Re-dispatch (or let the cron overlap) to keep it seeded through judging.
+# The project link lives in ci/pear-link.txt (committed, canonical). Its writer keypair lives in
+# the GitHub Actions cache (pear-store-*), because `pear touch` mints a random key bound to the
+# machine that created it.
+#
+# Two hard rules learned the hard way:
+#   1. NEVER mint a new link silently. If the restored cache cannot write the canonical link, the
+#      run fails loudly (mint_new_link: true is an explicit, deliberate choice).
+#   2. Only one run may hold the store at a time — the job waits for any older run of this
+#      workflow to finish (and save its cache) before restoring, otherwise the two race and the
+#      newer one restores a stale snapshot.
+
 on:
   workflow_dispatch:
     inputs:
       seed_minutes:
-        description: 'How long to seed (max ~345)'
+        description: 'How long to seed (max ~330)'
         required: false
-        default: '340'
+        default: '330'
       stage:
         description: 'Stage the latest successful Build by-arch artifact before seeding'
         required: false
         default: 'true'
+      mint_new_link:
+        description: 'DANGER: mint a brand new pear link (invalidates the one in ci/pear-link.txt)'
+        required: false
+        default: 'false'
   schedule:
     - cron: '20 */5 * * *'
 
@@ -24,16 +36,32 @@ permissions:
 jobs:
   seed:
     runs-on: ubuntu-latest
-    timeout-minutes: 355
+    timeout-minutes: 350
     env:
       PEAR_STORE: /home/runner/.config/pear
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
+      - name: Wait for any older run of this workflow to finish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 60); do
+            OTHERS=$(gh run list -R "$GITHUB_REPOSITORY" -w seed.yaml --status in_progress --json databaseId -q '.[].databaseId' | grep -v "^${GITHUB_RUN_ID}$" || true)
+            OTHERS="$OTHERS $(gh run list -R "$GITHUB_REPOSITORY" -w seed.yaml --status queued --json databaseId -q '.[].databaseId' | grep -v "^${GITHUB_RUN_ID}$" || true)"
+            OTHERS=$(echo $OTHERS | tr -s ' ')
+            if [ -z "$OTHERS" ]; then echo "no other run holds the store"; break; fi
+            echo "waiting for run(s): $OTHERS"
+            for r in $OTHERS; do gh run cancel "$r" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || true; done
+            sleep 20
+          done
+          sleep 30   # let the cancelled run's always() cache-save land
+
       - name: Restore pear storage (keypair + staged drive)
-        id: restore
         uses: actions/cache/restore@v4
         with:
           path: /home/runner/.config/pear
@@ -45,37 +73,43 @@ jobs:
         run: |
           npm i -g pear
           pear versions
-          echo "--- storage dir ---"
-          ls -la "$PEAR_STORE" || true
 
-      - name: Ensure link (reuse persisted one, else pear touch)
-        id: link
+      - name: Resolve the canonical link
         run: |
-          LINK_FILE="$PEAR_STORE/swarm-memory-link.txt"
-          if [ -s "$LINK_FILE" ]; then
-            LINK=$(cat "$LINK_FILE")
-            echo "Reusing persisted link: $LINK"
-          else
+          LINK=$(tr -d ' \r\n' < ci/pear-link.txt)
+          if [ '${{ github.event.inputs.mint_new_link }}' = 'true' ]; then
             pear touch --json | tee touch.json
             LINK=$(node -e "const NL=String.fromCharCode(10);const l=require('fs').readFileSync('touch.json','utf8').split(NL).map(s=>s.trim()).filter(Boolean).map(JSON.parse).find(x=>x.data&&x.data.link);console.log(l.data.link)")
-            mkdir -p "$PEAR_STORE" && echo "$LINK" > "$LINK_FILE"
-            echo "::notice title=New pear link::$LINK"
+            echo "::warning title=Minted a NEW pear link::$LINK — commit it to ci/pear-link.txt and to package.json upgrade, then rebuild"
           fi
-          echo "link=$LINK" >> "$GITHUB_OUTPUT"
           echo "PEAR_LINK=$LINK" >> "$GITHUB_ENV"
           echo "$LINK" > ci-link.txt
-          echo "## SwarmMemory pear link" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "$LINK" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## link"
+            echo '```'
+            echo "$LINK"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
           echo "LINK=$LINK"
 
-      - name: Publish link as artifact (available while the job is still seeding)
+      - name: Publish link as artifact (readable while the job is still seeding)
         uses: actions/upload-artifact@v4
         with:
           name: pear-link-${{ github.run_id }}
           path: ci-link.txt
           retention-days: 3
+
+      - name: Prove we can still write this link
+        if: ${{ github.event.inputs.stage != 'false' }}
+        run: |
+          mkdir -p probe
+          cp package.json probe/package.json
+          if ! pear stage --dry-run "$PEAR_LINK" ./probe; then
+            echo "::error title=Lost the writer key::The restored cache cannot stage $PEAR_LINK."
+            echo "The link stays installable as long as someone seeds it, but no new release can be published."
+            echo "Recover: re-run with mint_new_link=true, then update ci/pear-link.txt + package.json upgrade and rebuild."
+            exit 1
+          fi
 
       - name: Download latest successful Build by-arch artifact
         if: ${{ github.event.inputs.stage != 'false' }}
@@ -87,22 +121,32 @@ jobs:
           gh run download "$RUN" -R "$GITHUB_REPOSITORY" -n by-arch -D tmp-art
           mkdir -p deployment && tar -xzf tmp-art/by-arch.tar.gz -C deployment
           find deployment -type f | sed 's/^/  /'
-          node -p "const p=require('./deployment/package.json'); 'deployment: '+p.name+' v'+p.version+' upgrade='+p.upgrade"
+          node -e "
+            const p = require('./deployment/package.json')
+            const link = process.env.PEAR_LINK
+            console.log('deployment: ' + p.name + ' v' + p.version + ' upgrade=' + p.upgrade)
+            if (p.upgrade !== link) {
+              console.log('::error title=Wrong upgrade link baked into the binaries::' + p.upgrade + ' != ' + link)
+              process.exit(1)
+            }
+          "
 
-      - name: Stage deployment to link
+      - name: Stage the release
         if: ${{ github.event.inputs.stage != 'false' }}
         run: |
           pear stage --dry-run "$PEAR_LINK" ./deployment
           pear stage "$PEAR_LINK" ./deployment
           pear info "$PEAR_LINK" | tee pear-info.txt
-          echo "## pear info" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          cat pear-info.txt >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## staged"
+            echo '```'
+            cat pear-info.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Seed
         run: |
-          MIN="${{ github.event.inputs.seed_minutes || '340' }}"
+          MIN="${{ github.event.inputs.seed_minutes || '330' }}"
           echo "Seeding $PEAR_LINK for $MIN minutes"
           timeout "${MIN}m" pear seed --no-tty "$PEAR_LINK" || echo "seed ended (timeout/exit $?)"
 
