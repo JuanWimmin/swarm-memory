@@ -141,7 +141,10 @@ class SwarmStore extends ReadyResource {
   async _restoreClock() {
     let max = 0
     for (const prefix of ['n!', 'e!', 'm!']) {
-      for await (const entry of this.base.view.createReadStream({ gte: prefix, lt: rangeEnd(prefix) })) {
+      for await (const entry of this.base.view.createReadStream({
+        gte: prefix,
+        lt: rangeEnd(prefix)
+      })) {
         const at = entry.value && typeof entry.value.at === 'number' ? entry.value.at : 0
         if (at > max) max = at
       }
@@ -224,7 +227,10 @@ class SwarmStore extends ReadyResource {
   async _collect(prefix) {
     if (!this.opened) await this.ready()
     const out = []
-    for await (const entry of this.base.view.createReadStream({ gte: prefix, lt: rangeEnd(prefix) })) {
+    for await (const entry of this.base.view.createReadStream({
+      gte: prefix,
+      lt: rangeEnd(prefix)
+    })) {
       out.push(entry.value)
     }
     return out

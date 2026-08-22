@@ -28,7 +28,9 @@ function validId(id) {
 }
 
 function validNode(node) {
-  return node !== null && typeof node === 'object' && validId(node.id) && typeof node.type === 'string'
+  return (
+    node !== null && typeof node === 'object' && validId(node.id) && typeof node.type === 'string'
+  )
 }
 
 function validEdge(edge) {
@@ -73,7 +75,9 @@ async function apply(nodes, view, host) {
   for (const node of nodes) {
     const op = node.value
     if (!op || typeof op !== 'object') continue // acks / malformed
-    const by = op.by || (node.from && node.from.key ? b4a.toString(node.from.key, 'hex').slice(0, 8) : 'unknown')
+    const by =
+      op.by ||
+      (node.from && node.from.key ? b4a.toString(node.from.key, 'hex').slice(0, 8) : 'unknown')
 
     switch (op.op) {
       case 'add-writer': {
@@ -146,4 +150,14 @@ async function apply(nodes, view, host) {
   }
 }
 
-module.exports = { apply, shouldOverwrite, validId, validNode, validEdge, nodeKey, edgeKey, rangeEnd, NOTE }
+module.exports = {
+  apply,
+  shouldOverwrite,
+  validId,
+  validNode,
+  validEdge,
+  nodeKey,
+  edgeKey,
+  rangeEnd,
+  NOTE
+}
