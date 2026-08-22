@@ -6,7 +6,7 @@ on:
       link:
         description: 'pear:// link to install'
         required: true
-        default: 'pear://aojgk7heyoi1so1m8pe8mnmf8p3ryph9ypi88rmc6gemttexro4o'
+        default: 'pear://nna7ykdzojaheo8jy65rqhgeg5azo3oojjo7gc6ur4rf4bb9w1io'
       ota_wait_seconds:
         description: 'Keep the installed binary running (updates ON) this many seconds to observe an OTA update'
         required: false
