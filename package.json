@@ -1,6 +1,6 @@
 {
   "name": "swarm-memory",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "P2P team memory for smart-contract projects. Shared knowledge graph over the swarm, installed and updated via Pear.",
   "private": true,
   "bin": "bin.mjs",
@@ -35,8 +35,10 @@
     "paparam": "^1.10.1",
     "pear-runtime": "^1.2.0",
     "picocolors": "^1.1.1",
+    "protomux-wakeup": "^2.9.0",
     "ready-resource": "^1.2.0",
-    "which-runtime": "^1.4.0"
+    "which-runtime": "^1.4.0",
+    "z32": "^1.1.0"
   },
   "devDependencies": {
     "bare-build": "^1.0.2",
