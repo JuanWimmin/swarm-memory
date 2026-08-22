@@ -41,7 +41,11 @@ jobs:
           $dst = Join-Path $PWD 'installed'
           New-Item -ItemType Directory -Force $dst | Out-Null
           $sw = [Diagnostics.Stopwatch]::StartNew()
-          pear install --timeout 300 --to $dst "${{ github.event.inputs.link }}"
+          for ($i = 1; $i -le 6; $i++) {
+            pear install --timeout 120 --to $dst "${{ github.event.inputs.link }}"
+            if (Get-ChildItem -Recurse -Filter swarm-memory*.exe $dst -ErrorAction SilentlyContinue) { break }
+            Write-Output "retry $i"; Start-Sleep -Seconds 20
+          }
           Write-Output "elapsed=$([int]$sw.Elapsed.TotalSeconds)s"
           Get-ChildItem -Recurse $dst | Select-Object FullName,Length | Format-Table -AutoSize
           $exe = Get-ChildItem -Recurse -Filter 'swarm-memory*.exe' $dst | Select-Object -First 1

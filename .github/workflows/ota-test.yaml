@@ -134,9 +134,16 @@ jobs:
         run: |
           $dst = Join-Path $PWD 'installed'
           New-Item -ItemType Directory -Force $dst | Out-Null
-          pear install --timeout 300 --to $dst "$env:LINK"
-          $exe = Get-ChildItem -Recurse -Filter 'swarm-memory*.exe' $dst | Select-Object -First 1
-          if (-not $exe) { throw 'install produced no binary' }
+          $exe = $null
+          for ($i = 1; $i -le 10; $i++) {
+            Write-Output "install attempt $i"
+            pear install --timeout 120 --to $dst "$env:LINK"
+            $exe = Get-ChildItem -Recurse -Filter 'swarm-memory*.exe' $dst -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($exe) { break }
+            Write-Output "no seeder yet, retrying in 20s"
+            Start-Sleep -Seconds 20
+          }
+          if (-not $exe) { throw 'install produced no binary after 10 attempts' }
           "EXE=$($exe.FullName)" | Out-File -Append $env:GITHUB_ENV
           $before = & $exe.FullName --version
           Write-Output "VERSION BEFORE: $before"
