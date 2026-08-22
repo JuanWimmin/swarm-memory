@@ -1,0 +1,184 @@
+name: OTA test (install, publish a new version, watch it land)
+
+# Demonstrates the track's second hard requirement: "a real update reaching an installed copy".
+#
+# PRECONDITION: no other job may hold the pear keypair cache while this runs.
+# Cancel the "Seed" workflow first and wait for it to COMPLETE (its always() steps save the
+# cache), then dispatch this. Re-dispatch Seed afterwards. Two runs staging from different
+# cache snapshots would fork the drive.
+#
+# Two jobs run in parallel, coordinated by time (no cache sharing across OSes):
+#   publisher (ubuntu, owns the keypair) — seeds immediately, waits, stages the NEW build,
+#                                          keeps seeding so the update is downloadable.
+#   installer (windows)                  — installs the currently seeded version, keeps it
+#                                          running with updates enabled, waits for the update.
+
+on:
+  workflow_dispatch:
+    inputs:
+      link:
+        description: 'pear:// link (must match package.json upgrade)'
+        required: true
+        default: 'pear://nna7ykdzojaheo8jy65rqhgeg5azo3oojjo7gc6ur4rf4bb9w1io'
+      build_run:
+        description: 'Build run id holding the NEW by-arch artifact (empty = latest successful)'
+        required: false
+        default: ''
+      publish_after_seconds:
+        description: 'How long the publisher waits before staging the new version'
+        required: false
+        default: '180'
+      watch_minutes:
+        description: 'How long the installer waits for the update to land'
+        required: false
+        default: '12'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  publisher:
+    name: publish new version + seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PEAR_STORE: /home/runner/.config/pear
+      LINK: ${{ github.event.inputs.link }}
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Restore pear storage (keypair + drive)
+        uses: actions/cache/restore@v4
+        with:
+          path: /home/runner/.config/pear
+          key: pear-store-${{ github.run_id }}
+          restore-keys: |
+            pear-store-
+
+      - name: Install Pear CLI
+        run: |
+          npm i -g pear
+          pear versions
+
+      - name: Start seeding the current version
+        run: |
+          nohup pear seed --no-tty "$LINK" > seed.log 2>&1 &
+          echo $! > seed.pid
+          sleep 20
+          tail -20 seed.log
+
+      - name: Download the NEW by-arch build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN='${{ github.event.inputs.build_run }}'
+          if [ -z "$RUN" ]; then
+            RUN=$(gh run list -R "$GITHUB_REPOSITORY" -w build.yaml --status success -L 1 --json databaseId -q '.[0].databaseId')
+          fi
+          echo "Build run: $RUN"
+          gh run download "$RUN" -R "$GITHUB_REPOSITORY" -n by-arch -D tmp-art
+          mkdir -p deployment && tar -xzf tmp-art/by-arch.tar.gz -C deployment
+          node -p "const p=require('./deployment/package.json'); 'new build: '+p.name+' v'+p.version+' upgrade='+p.upgrade"
+
+      - name: Wait, then stage the new version to the same link
+        run: |
+          sleep "${{ github.event.inputs.publish_after_seconds || '180' }}"
+          pear stage --dry-run "$LINK" ./deployment
+          pear stage "$LINK" ./deployment
+          pear info "$LINK" | tee pear-info.txt
+          {
+            echo "## published"
+            echo '```'
+            cat pear-info.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep seeding while the installer updates
+        run: |
+          sleep $(( ${{ github.event.inputs.watch_minutes || '12' }} * 60 ))
+          tail -20 seed.log
+
+      - name: Shutdown sidecar before caching storage
+        if: always()
+        run: pear sidecar shutdown || true
+
+      - name: Save pear storage
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: /home/runner/.config/pear
+          key: pear-store-${{ github.run_id }}
+
+  installer:
+    name: install + watch for the update
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      LINK: ${{ github.event.inputs.link }}
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Pear CLI
+        shell: pwsh
+        run: |
+          npm i -g pear
+          pear versions
+
+      - name: Install the currently seeded version
+        shell: pwsh
+        run: |
+          $dst = Join-Path $PWD 'installed'
+          New-Item -ItemType Directory -Force $dst | Out-Null
+          pear install --timeout 300 --to $dst "$env:LINK"
+          $exe = Get-ChildItem -Recurse -Filter 'swarm-memory*.exe' $dst | Select-Object -First 1
+          if (-not $exe) { throw 'install produced no binary' }
+          "EXE=$($exe.FullName)" | Out-File -Append $env:GITHUB_ENV
+          $before = & $exe.FullName --version
+          Write-Output "VERSION BEFORE: $before"
+          "VERSION_BEFORE=$before" | Out-File -Append $env:GITHUB_ENV
+
+      - name: Run it with OTA updates enabled and wait for the update
+        shell: pwsh
+        run: |
+          $store = Join-Path $PWD 'store'
+          $p = Start-Process -FilePath $env:EXE -ArgumentList @('--storage', $store) -NoNewWindow -PassThru `
+                 -RedirectStandardOutput app-out.log -RedirectStandardError app-err.log
+          $deadline = (Get-Date).AddMinutes([int]'${{ github.event.inputs.watch_minutes }}')
+          $landed = $false
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 15
+            if (Test-Path app-out.log) {
+              if (Select-String -Path app-out.log -Pattern 'applied update' -Quiet) { $landed = $true; break }
+            }
+            if ($p.HasExited) { Write-Output "app exited with $($p.ExitCode)"; break }
+          }
+          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+          Write-Output '=== installed copy stdout ==='
+          Get-Content app-out.log -ErrorAction SilentlyContinue
+          Write-Output '=== installed copy stderr ==='
+          Get-Content app-err.log -ErrorAction SilentlyContinue
+          $after = & $env:EXE --version
+          Write-Output "VERSION BEFORE: $env:VERSION_BEFORE"
+          Write-Output "VERSION AFTER : $after"
+          {
+            "## OTA test"
+            "- before: ``$env:VERSION_BEFORE``"
+            "- after : ``$after``"
+            "- update applied: **$landed**"
+          } | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          if (-not $landed) { throw 'no OTA update observed in the watch window' }
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ota-logs-${{ github.run_id }}
+          path: |
+            app-out.log
+            app-err.log
+          if-no-files-found: warn
