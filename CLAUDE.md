@@ -27,3 +27,18 @@ Proyecto del Aleph Hackathon 2026, Pears Track. **Lee `TEAM_PLAN.md` completo an
 - `src/vault/` (B2) lector .stellar-memory · `src/core/` (B2) grafo+queries · `src/render/` (B2) ANSI+export
 - `src/sync/` (B1) Corestore+Autobase+Hyperswarm+pairing
 - `web/` (F) visor HTML autocontenido · `demo/vault/` dataset demo
+
+## Release (B1 machine only)
+
+El link del release es **pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy** (`ci/pear-link.txt`
+y el campo `upgrade`). Su llave de escritura vive en `%APPDATA%pear` de la máquina de B1: **solo ahí**
+se puede `pear stage`. El seeder autoritativo es `C:Usersjuanpswarm-memory-seed.cmd` (ventana propia,
+reinicio automático, log en `%USERPROFILE%swarm-memory-seed.log`); `reseed.yaml` añade dos seeders sin llaves.
+
+Publicar una versión: `npm version patch` → push → `gh workflow run build.yaml` → descargar el artefacto
+`by-arch` → `tar -xzf` → `pear stage <link> ./deployment`. Detalles y bitácora en `docs/DEPLOY.md`.
+
+Trampas ya pagadas (no repetir): `pear seed` muere a los ~20 s si stdin está en EOF (CI) — hay que
+mantener stdin abierto; stagear desde una caché sin los blobs **forkea el drive** y todo `pear install`
+falla con `ERR_INVALID_MANIFEST`; `picocolors` lee el global `process` y revienta en Bare (usar
+`src/sync/colors.js`); Git Bash no captura el stdout de un binario Bare — usar PowerShell.
