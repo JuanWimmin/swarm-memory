@@ -13,7 +13,7 @@
 | --- | --- |
 | App / bin name | `swarm-memory` (`package.json` `name`, `"bin": "bin.mjs"` → installed binary `swarm-memory.exe` on Windows, `swarm-memory` on macOS/Linux) |
 | Template | `holepunchto/hello-pear-bare`, branch **`main`** (OTA updater in a Bare worker thread) |
-| **Link (upgrade drive)** | `pear://amu47syduoenxojzur88fi5sq3ohqtwg6fms4bfuonag3h1d9r1o` = `package.json` `upgrade` (commit `985f850`). Minted by `pear touch` **inside GitHub Actions** (`.github/workflows/seed.yaml`); the writer keypair lives in the Actions cache `pear-store-*`. Verified installable from a clean machine in 5 s. |
+| **Link (upgrade drive)** | `pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy` = `package.json` `upgrade` (commit `985f850`). Minted by `pear touch` **inside GitHub Actions** (`.github/workflows/seed.yaml`); the writer keypair lives in the Actions cache `pear-store-*`. Verified installable from a clean machine in 5 s. |
 | Retired links | `pear://ahyzbzb5e9yg…` (never writable here) and `pear://aojgk7heyoi1so1m8pe8mnmf8p3ryph9ypi88rmc6gemttexro4o` (minted on B1 box; **unreachable** — see Seeder row). `pear info` on either prints `[ Empty ]` from outside. Never stage, seed or publish them. |
 | Drive state (2026-08-22 17:11, B1 clock UTC-5) | `pear info` → `version 0.1.0`, `length 3`, `fork 0`, verlink `pear://0.3.aojgk7he…`; `pear dump --list` → `/package.json`, `/by-arch/win32-x64/app/swarm-memory.exe` (56.8 MB). Local tree already at `0.1.1` (not staged yet). |
 | Dev host | Windows 11. `pear` = npm wrapper `pear@3.0.0` → `%LOCALAPPDATA%\Programs\pear\pear.exe`. Platform data: `%APPDATA%\pear\` (`corestores/`, `db/`, `gc/`, `pear.log`) — verified on disk; `%LOCALAPPDATA%\pear` does not exist. |
@@ -26,8 +26,8 @@ Link anatomy: a **versioned link** is `pear://<fork>.<length>.<key>` (docs, manu
 ## 1. One-time setup (DONE — do not repeat)
 
 ```sh
-pear touch                                  # → pear://amu47syduoenxojzur88fi5sq3ohqtwg6fms4bfuonag3h1d9r1o   (run in CI, see 5b)
-npm pkg set upgrade=pear://amu47syduoenxojzur88fi5sq3ohqtwg6fms4bfuonag3h1d9r1o
+pear touch                                  # → pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy   (run in CI, see 5b)
+npm pkg set upgrade=pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy
 npm start                                   # must print "CLI ready" and NO INVALID_URL
 ```
 

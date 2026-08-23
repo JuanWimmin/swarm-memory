@@ -19,7 +19,7 @@ on:
       link:
         description: 'pear:// link (must match package.json upgrade)'
         required: true
-        default: 'pear://amu47syduoenxojzur88fi5sq3ohqtwg6fms4bfuonag3h1d9r1o'
+        default: 'pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy'
       build_run:
         description: 'Build run id holding the NEW by-arch artifact (empty = latest successful)'
         required: false

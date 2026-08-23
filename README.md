@@ -12,7 +12,7 @@ directly between peers over Hyperswarm. No server, no account, no config: one in
 teammate has the whole project's memory in their terminal.
 
 ```sh
-pear install pear://amu47syduoenxojzur88fi5sq3ohqtwg6fms4bfuonag3h1d9r1o
+pear install pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy
 swarm-memory                 # the project's context, in your terminal
 swarm-memory invite          # → an invite code for a teammate
 swarm-memory join <code>     # they get the graph, live, from the swarm
@@ -26,7 +26,7 @@ new releases over the swarm.
 ## Install
 
 ```sh
-pear install pear://amu47syduoenxojzur88fi5sq3ohqtwg6fms4bfuonag3h1d9r1o
+pear install pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy
 ```
 
 That is the whole installation — Pear fetches the binary for your platform from peers and puts it on

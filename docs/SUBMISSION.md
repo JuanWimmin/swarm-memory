@@ -6,7 +6,7 @@ Deadline **Sun 23-Aug 12:00 ART** · judging from 13:00 ART · keep seeding unti
 
 | Item | Value |
 | --- | --- |
-| Install command | `pear install pear://amu47syduoenxojzur88fi5sq3ohqtwg6fms4bfuonag3h1d9r1o` |
+| Install command | `pear install pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy` |
 | Repo | https://github.com/JuanWimmin/swarm-memory (public, branch `master`) |
 | Template + variant | `holepunchto/hello-pear-bare`, branch **`main`** (OTA updater in a Bare worker thread) — stated in the README |
 | Platforms in the drive | win32-x64, win32-arm64, darwin-x64, darwin-arm64, linux-x64, linux-arm64 |
@@ -29,7 +29,7 @@ no keys, only the link (see `docs/SEEDER.md`):
 
 ```sh
 npm i -g pear
-pear seed pear://amu47syduoenxojzur88fi5sq3ohqtwg6fms4bfuonag3h1d9r1o
+pear seed pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy
 ```
 
 Two seeders on different networks is the cheap insurance against the entry being unjudgeable.
