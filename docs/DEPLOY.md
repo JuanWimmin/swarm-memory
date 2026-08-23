@@ -143,6 +143,25 @@ Rules:
 - `firewalled true` / random NAT was observed: peers behind symmetric NAT may fail to holepunch. Mitigation (docs troubleshooting "Seeder unreachable": "add the key to multiple reachable seeders"): run `pear seed pear://<key>` on a second machine (B2 or a hotspot-connected laptop) — `pear help seed`: "Seed or reseed a project" (CLI reference: "Seed project or reseed key."), so a non-writer machine pulls the blocks from B1 and serves them. [UNVERIFIED on a second machine — do it in the ritual.]
 - Do not `pear stage --truncate` or re-`touch` while seeding for judges.
 
+## 5b. Who owns the link, and the two ways seeding breaks
+
+The writer keypair for `ci/pear-link.txt` lives in the GitHub Actions cache; `seed.yaml` is the
+only job allowed to stage. Two failure modes cost us hours — both are now guarded:
+
+1. **Cache race minted a brand new link.** Two seed runs overlapped; the newer restored a snapshot
+   saved before the older one finished, found no keypair, and silently ran `pear touch`. Every
+   installed copy then pointed at an orphaned drive. Guards: the canonical link is committed
+   (`ci/pear-link.txt`), minting requires `mint_new_link=true`, and a run waits for (and cancels)
+   older runs before restoring — which needs `permissions: actions: write`, or the two deadlock.
+
+2. **`pear seed` exits on EOF.** In a CI shell stdin is closed, and `pear seed` returns after ~20 s
+   with a success exit code, so the step looked green while nothing was being served. Fix: hold
+   stdin open and restart in a loop — `timeout 1800 sh -c 'tail -f /dev/null | pear seed --no-tty "$0"' LINK`.
+
+A reseeder needs **no keys**, only the link: `reseed.yaml` runs one on ubuntu and one on windows,
+and any teammate can run `pear seed pear://<key>` at home. More seeders on more networks is the
+only real insurance.
+
 ## 6. Clean install test (every milestone)
 
 From a directory **outside** the repo (e.g. `$TEMP/pear-install-test`), with the seeder running:
@@ -293,6 +312,8 @@ Caveats:
 | 2026-08-22 17:29 | 0.1.1 | `pear://0.6.nna7ykdz…` | win32-x64 | **PASS — 5 s** (GitHub windows runner, run `32603016008`) | n/a | first CI-owned link; B1 box still cannot install (local network) |
 | 2026-08-22 17:48 | 0.1.1 (upgrade→nna7yk) | staged by `seed.yaml` run `32603385257` | 6 arches (CI `by-arch`) | PASS | n/a | first stage where the embedded upgrade link is the reachable one |
 | 2026-08-22 ~18:05 | 0.1.2 | _see `ota-test.yaml` run_ | 6 arches | PASS | _OTA 0.1.1 → 0.1.2 under test_ | publisher+installer run in parallel on CI |
+| 2026-08-23 08:20 | 0.1.3 | staged by `seed.yaml` | 6 arches | re-checking | pending | **seeding was broken all night**: `pear seed` exits when stdin is at EOF in CI, so the step "succeeded" in 20 s while nothing was served. Fixed with an open stdin + restart loop. |
+| 2026-08-23 08:35 | 0.1.3 | `seed.yaml` run 32614134486 | 6 arches | verifying | — | plus keyless `reseed.yaml` (ubuntu + windows) and a local reseeder on B1 box, now on a home network |
 
 ## 10. Troubleshooting
 
