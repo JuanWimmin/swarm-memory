@@ -244,7 +244,7 @@ counts go back to their scanned values — and Ana's note is still sitting there
 
 ```sh
 swarm-memory graph --html payroll.html --storage ./peer-b --as Bruno
-open payroll.html                       # macOS · `start` on Windows · `xdg-open` on Linux
+start payroll.html                      # Windows · `open` on macOS · `xdg-open` on Linux
 ```
 
 > **Proves:** one self-contained file — no server, no CDN, no network. Drop it in Slack, open it
