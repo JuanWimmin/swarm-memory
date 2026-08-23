@@ -1,0 +1,51 @@
+name: Reseed (extra availability, no keys needed)
+
+# A reseeder holds no writer key: it downloads the drive from whoever is serving it and serves it
+# on. Run several of these in parallel (different runners = different networks) so the link stays
+# installable even if the owning seeder is between runs.
+
+on:
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: 'How long to reseed'
+        required: false
+        default: '330'
+  schedule:
+    - cron: '5 */2 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  reseed:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Pear CLI
+        shell: bash
+        run: npm i -g pear
+
+      - name: Reseed the canonical link
+        shell: bash
+        run: |
+          LINK=$(tr -d ' \r\n' < ci/pear-link.txt)
+          MIN="${{ github.event.inputs.minutes || '330' }}"
+          END=$(( $(date +%s) + MIN * 60 ))
+          echo "Reseeding $LINK for $MIN minutes"
+          n=0
+          while [ "$(date +%s)" -lt "$END" ]; do
+            n=$((n+1))
+            echo "--- reseed attempt $n at $(date -u +%H:%M:%S) ---"
+            timeout 1800 sh -c 'tail -f /dev/null | pear seed --no-tty "$0"' "$LINK" || true
+            sleep 5
+          done
