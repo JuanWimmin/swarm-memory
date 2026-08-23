@@ -144,11 +144,20 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Seed
+      - name: Seed (restart-proof loop — pear seed can exit on its own in CI)
         run: |
           MIN="${{ github.event.inputs.seed_minutes || '330' }}"
-          echo "Seeding $PEAR_LINK for $MIN minutes"
-          timeout "${MIN}m" pear seed --no-tty "$PEAR_LINK" || echo "seed ended (timeout/exit $?)"
+          END=$(( $(date +%s) + MIN * 60 ))
+          echo "Seeding $PEAR_LINK until $(date -d @$END 2>/dev/null || echo "+${MIN}m")"
+          n=0
+          while [ "$(date +%s)" -lt "$END" ]; do
+            n=$((n+1))
+            echo "--- seed attempt $n at $(date -u +%H:%M:%S) ---"
+            # keep stdin open: pear seed exits immediately when stdin is at EOF
+            timeout 1800 sh -c 'tail -f /dev/null | pear seed --no-tty "$0"' "$PEAR_LINK" || true
+            sleep 5
+          done
+          echo "seed window over after $n attempts"
 
       - name: Shutdown sidecar before caching storage
         if: always()
