@@ -1,6 +1,6 @@
 {
   "name": "swarm-memory",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "P2P team memory for smart-contract projects. Shared knowledge graph over the swarm, installed and updated via Pear.",
   "private": true,
   "bin": "bin.mjs",
