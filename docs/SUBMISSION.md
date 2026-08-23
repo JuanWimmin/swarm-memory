@@ -10,7 +10,7 @@ Deadline **Sun 23-Aug 12:00 ART** · judging from 13:00 ART · **keep seeding un
 | Repo | https://github.com/JuanWimmin/swarm-memory (public, branch `master`) |
 | Template + variant | `holepunchto/hello-pear-bare`, branch **`main`** (OTA updater in a Bare worker thread) — stated in the README |
 | Platforms in the drive | win32-x64, win32-arm64, darwin-x64, darwin-arm64, linux-x64, linux-arm64 (474 MB, all six) |
-| Released version | **0.1.8** — the viewer is bundled, so `graph --html` works from a fresh install |
+| Released version | **0.1.9** — adds `note` and the live `resume --watch`; the viewer is bundled so `graph --html` works from a fresh install |
 | Video (≤3 min, English) | **owner: F** — must show `pear install` on a clean machine and an OTA update landing |
 | Track | Pears |
 
@@ -35,7 +35,7 @@ swarm-memory v0.1.7
 
 | | |
 | --- | --- |
-| Runs on Bare, not Node | `bare test/index.js`: 11 tests / 155 asserts green (7 tests / 37 asserts are the P2P suite, pairing two peers over a local DHT testnet) |
+| Runs on Bare, not Node | `bare test/index.js`: **29 tests / 534 asserts** green — unit tests for the merge policy, integration tests for the whole command layer, two-peer pairing and the live repaint, all on a local DHT testnet |
 | Multi-platform binaries | `build.yaml` builds 6 targets with `bare-build`, merged by `pear-build` into one `by-arch` deployment |
 
 ## Seeding through judging — the one thing that must not stop
@@ -80,10 +80,13 @@ swarm-memory publish --demo
 swarm-memory resume
 swarm-memory graph --html graph.html   # opens offline, no CDN
 
-# 3. a second peer, no server
-swarm-memory invite            # terminal A — prints the code, stays online
-swarm-memory join <code>       # terminal B — replicates the graph live
-swarm-memory peers
+# 3. a second peer, no server — the shot that carries the whole idea
+swarm-memory resume --watch    # terminal A — the live view, left open on camera
+swarm-memory invite            # terminal A (second tab) — prints the code, stays online
+swarm-memory join <code>       # terminal B — replicates the graph in ~4 s
+swarm-memory note "LastPaid has no extend_ttl - a payment can become unreachable" \
+    --about storage/payroll.lastpaid          # terminal B writes...
+#                                             ...and terminal A repaints by itself
 
 # 4. OTA — leave `swarm-memory` running, publish a release, and the installed copy prints
 #    [updater] getting new update → update complete... applying → applied update
