@@ -31,9 +31,9 @@ Proyecto del Aleph Hackathon 2026, Pears Track. **Lee `TEAM_PLAN.md` completo an
 ## Release (B1 machine only)
 
 El link del release es **pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy** (`ci/pear-link.txt`
-y el campo `upgrade`). Su llave de escritura vive en `%APPDATA%pear` de la máquina de B1: **solo ahí**
-se puede `pear stage`. El seeder autoritativo es `C:SERSJUANPSWARM-MEMORY-SEED.CMD` (ventana propia,
-reinicio automático, log en `%USERPROFILE%swarm-memory-seed.log`); `reseed.yaml` añade dos seeders sin llaves.
+y el campo `upgrade`). Su llave de escritura vive en `%APPDATA%\pear` de la máquina de B1: **solo ahí**
+se puede `pear stage`. El seeder autoritativo es `C:\Users\juanp\swarm-memory-seed.cmd` (ventana propia,
+reinicio automático, log en `%USERPROFILE%\swarm-memory-seed.log`); `reseed.yaml` añade dos seeders sin llaves.
 
 Publicar una versión: `npm version patch` → push → `gh workflow run build.yaml` → descargar el artefacto
 `by-arch` → `tar -xzf` → `pear stage <link> ./deployment`. Detalles y bitácora en `docs/DEPLOY.md`.
