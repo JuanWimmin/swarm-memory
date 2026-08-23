@@ -10,7 +10,7 @@ Deadline **Sun 23-Aug 12:00 ART** · judging from 13:00 ART · **keep seeding un
 | Repo | https://github.com/JuanWimmin/swarm-memory (public, branch `master`) |
 | Template + variant | `holepunchto/hello-pear-bare`, branch **`main`** (OTA updater in a Bare worker thread) — stated in the README |
 | Platforms in the drive | win32-x64, win32-arm64, darwin-x64, darwin-arm64, linux-x64, linux-arm64 (474 MB, all six) |
-| Released version | **0.1.10** — `note`, live `resume --watch`, and `invite` now holds the live view with the code pinned |
+| Released version | **0.1.12** — fixes a joined peer losing its store on restart, and one-shot writes not reaching peers |
 | Video (≤3 min, English) | **owner: F** — must show `pear install` on a clean machine and an OTA update landing |
 | Track | Pears |
 
@@ -35,7 +35,7 @@ swarm-memory v0.1.7
 
 | | |
 | --- | --- |
-| Runs on Bare, not Node | `bare test/index.js`: **29 tests / 534 asserts** green — unit tests for the merge policy, integration tests for the whole command layer, two-peer pairing and the live repaint, all on a local DHT testnet |
+| Runs on Bare, not Node | `bare test/index.js`: **43 tests / 603 asserts** green — unit tests for the merge policy, integration tests for the whole command layer, two-peer pairing and the live repaint, all on a local DHT testnet |
 | Multi-platform binaries | `build.yaml` builds 6 targets with `bare-build`, merged by `pear-build` into one `by-arch` deployment |
 
 ## Seeding through judging — the one thing that must not stop
