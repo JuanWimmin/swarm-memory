@@ -84,7 +84,10 @@ erase what a person decided to say.
 
 ## Graph viewer
 
-`web/template.html` is the self-contained viewer B2 injects via `swarm-memory graph --html`.
+`web/template.html` is the self-contained viewer that `swarm-memory graph --html` fills in. It is
+baked into the binary (`scripts/bundle-template.js` → `web/template.generated.js`), so an installed
+copy can write a working viewer with no repo files around; a `web/template.html` next to you still
+wins, so the frontend can iterate without a rebuild.
 Keep the line `const GRAPH = /*__GRAPH_DATA__*/;` — `src/render/html.js` replaces `/*__GRAPH_DATA__*/`
 with `JSON.stringify(graph)`.
 

@@ -319,6 +319,7 @@ Caveats:
 | 2026-08-23 ~09:05 | 0.1.5 | _pending_ | all 6 | — | _OTA 0.1.4 → 0.1.5 under test_ | includes B2 vault/core/render merged via PR #1 |
 | 2026-08-23 08:56 | 0.1.5 | `pear://0.15.ino4ymu38…` | all 6 | PASS | — | staged from B1 box |
 | 2026-08-23 09:07 | **0.1.7** | `pear://0.22.ino4ymu38…` | all 6 | **PASS — 6 s** (run 32615845671) | **PASS** — a running 0.1.5 copy applied 0.1.7 by itself (`[updater] applied update`, then `--version` = 0.1.7) | final release: adds `publish --demo` with the demo graph bundled into the binary |
+| 2026-08-23 09:32 | **0.1.8** | _see run_ | all 6 | verified | — | bundles the graph viewer into the binary so `graph --html` works from an installed copy; also merges F PR #2 (real viewer) |
 
 ## 10. Troubleshooting
 

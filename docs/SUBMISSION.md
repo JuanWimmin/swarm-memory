@@ -10,7 +10,7 @@ Deadline **Sun 23-Aug 12:00 ART** · judging from 13:00 ART · **keep seeding un
 | Repo | https://github.com/JuanWimmin/swarm-memory (public, branch `master`) |
 | Template + variant | `holepunchto/hello-pear-bare`, branch **`main`** (OTA updater in a Bare worker thread) — stated in the README |
 | Platforms in the drive | win32-x64, win32-arm64, darwin-x64, darwin-arm64, linux-x64, linux-arm64 (474 MB, all six) |
-| Released version | **0.1.7** · verlink `pear://0.22.ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy` |
+| Released version | **0.1.8** — the viewer is bundled, so `graph --html` works from a fresh install |
 | Video (≤3 min, English) | **owner: F** — must show `pear install` on a clean machine and an OTA update landing |
 | Track | Pears |
 
@@ -76,8 +76,9 @@ pear install pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy
 swarm-memory --version
 
 # 2. the project's memory in the terminal
-swarm-memory publish --graph demo/graph.json
+swarm-memory publish --demo
 swarm-memory resume
+swarm-memory graph --html graph.html   # opens offline, no CDN
 
 # 3. a second peer, no server
 swarm-memory invite            # terminal A — prints the code, stays online
