@@ -39,7 +39,16 @@ function oneShot(cmd, fn) {
     const base = ctx(cmd)
     Promise.resolve(fn(base))
       .then(async (store) => {
-        if (store) await store.close()
+        if (store) {
+          // a write has to reach somebody before we tear the connection down
+          const flush = store.flushed ? await store.flushed() : { reason: 'nothing written' }
+          if (flush.reason === 'no peers online') {
+            console.log('saved locally — no peer online right now, it syncs when one connects')
+          } else if (flush.reason === 'peers did not confirm in time') {
+            console.log('saved locally — the peer did not confirm yet, it will catch up')
+          }
+          await store.close()
+        }
         Bare.exit()
       })
       .catch((err) => {
@@ -101,6 +110,7 @@ const publish = command(
   summary('Import a graph export into the swarm'),
   flag('--graph <file>', 'graph.json to import'),
   flag('--demo', 'load the bundled demo project (private-payroll)'),
+  flag('--vault <dir>', 'a scanned .stellar-memory directory to import'),
   ...shared(),
   () =>
     oneShot(publish, (base) =>

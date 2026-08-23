@@ -38,8 +38,14 @@ async function openStore(dir, opts = {}) {
     return joined
   }
 
+  // a directory that has been paired before reopens as the base it joined, not as a new one
+  const remembered = opts.key
+    ? { key: opts.key, encryptionKey: null }
+    : await SwarmStore.readRemembered(store)
+
   const swarmStore = new SwarmStore(store, {
-    key: opts.key || null,
+    key: opts.key || remembered.key || null,
+    encryptionKey: remembered.encryptionKey || undefined,
     name: opts.name,
     bootstrap: opts.bootstrap
   })

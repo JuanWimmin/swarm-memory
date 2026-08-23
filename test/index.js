@@ -12,6 +12,7 @@ test('package metadata is release-ready', (t) => {
 require('./apply.test.js')
 require('./render.test.js')
 require('./sync.test.js')
+require('./rejoin.test.js')
 
 // B2's vault/core/render suite talks to bare-fs and bare-path, which only exist
 // on Bare. Node runs the sync suite; `npm test` (brittle-bare) runs everything.

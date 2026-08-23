@@ -14,7 +14,32 @@ const b4a = require('b4a')
 
 const { apply, validId, validNode, validEdge, rangeEnd } = require('./apply.js')
 
+const USER_DATA_KEY = 'swarm-memory/base-key'
+const USER_DATA_ENCRYPTION_KEY = 'swarm-memory/encryption-key'
+
+/**
+ * What this directory was last opened as. Returns nulls for a fresh directory.
+ * @param {import('corestore')} corestore
+ */
+async function readRemembered(corestore) {
+  const core = Autobase.getLocalCore(corestore)
+  try {
+    await core.ready()
+    const key = await core.getUserData(USER_DATA_KEY)
+    const encryptionKey = await core.getUserData(USER_DATA_ENCRYPTION_KEY)
+    return { key: key || null, encryptionKey: encryptionKey || null }
+  } catch {
+    return { key: null, encryptionKey: null }
+  } finally {
+    await core.close().catch(() => {})
+  }
+}
+
 function noop() {}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 /** Build the Autobase view: a Hyperbee on the AutoStore core named 'view'. */
 function open(store) {
@@ -49,6 +74,7 @@ class SwarmStore extends ReadyResource {
     this.pairing = null
     this.member = null
     this.clock = 0
+    this.appended = 0
 
     this.base = new Autobase(store, opts.key || null, {
       valueEncoding: 'json',
@@ -90,6 +116,7 @@ class SwarmStore extends ReadyResource {
 
   async _open() {
     await this.base.ready()
+    await this._rememberBase()
 
     if (this.swarm === null) {
       this.swarm = new Hyperswarm({
@@ -108,6 +135,25 @@ class SwarmStore extends ReadyResource {
 
     this.swarm.join(this.base.discoveryKey)
     await this._restoreClock()
+  }
+
+  /**
+   * Autobase restores its bootstrap from the local core, but an encrypted base also needs its
+   * encryption key — and a peer that joined by invite only ever received that key in memory,
+   * from the pairing handshake. Without it a reopen silently starts a brand new empty base and
+   * everything the joiner replicated is gone. So we write both back to the local core.
+   */
+  async _rememberBase() {
+    const local = this.base.local
+    if (!local) return
+    try {
+      await local.setUserData(USER_DATA_KEY, this.base.key)
+      if (this.base.encryptionKey) {
+        await local.setUserData(USER_DATA_ENCRYPTION_KEY, this.base.encryptionKey)
+      }
+    } catch {
+      // a read-only or closing core is not worth failing the whole open for
+    }
   }
 
   async _close() {
@@ -152,6 +198,39 @@ class SwarmStore extends ReadyResource {
     if (max > this.clock) this.clock = max
   }
 
+  /**
+   * Wait until a peer has actually taken what this session wrote.
+   *
+   * A one-shot command (`note`, `publish`) appends and exits, and `base.append` only means
+   * "written to my own core" — it says nothing about anyone else having it. Closing straight
+   * away tears the connection down before the blocks leave the machine, so the teammate never
+   * sees the write. This waits for the acknowledgement, and is honest when nobody is online:
+   * the write is durable locally and replicates the next time the peers meet.
+   *
+   * @param {{ timeout?: number, connectWait?: number }} [opts]
+   * @returns {Promise<{ pushed: boolean, peers: number, reason?: string }>}
+   */
+  async flushed(opts = {}) {
+    const timeout = opts.timeout === undefined ? 15000 : opts.timeout
+    const connectWait = opts.connectWait === undefined ? 6000 : opts.connectWait
+    if (!this.appended) return { pushed: false, peers: this.peers, reason: 'nothing written' }
+
+    const local = this.base.local
+    if (!local) return { pushed: false, peers: this.peers, reason: 'no local core' }
+
+    const started = Date.now()
+    while (this.peers === 0 && Date.now() - started < connectWait) await sleep(150)
+    if (this.peers === 0) return { pushed: false, peers: 0, reason: 'no peers online' }
+
+    const target = local.length
+    while (Date.now() - started < timeout) {
+      const taken = local.peers.some((peer) => peer.remoteLength >= target)
+      if (taken) return { pushed: true, peers: this.peers }
+      await sleep(150)
+    }
+    return { pushed: false, peers: this.peers, reason: 'peers did not confirm in time' }
+  }
+
   /** Next lamport stamp. */
   tick() {
     return ++this.clock
@@ -183,6 +262,7 @@ class SwarmStore extends ReadyResource {
     const source = opts.source || 'scan'
     const at = opts.at === undefined ? this.tick() : opts.at
     if (at > this.clock) this.clock = at
+    this.appended++
     return this.base.append({ op: 'put-node', node, at, by: this.name, source })
   }
 
@@ -193,6 +273,7 @@ class SwarmStore extends ReadyResource {
     const source = opts.source || 'scan'
     const at = opts.at === undefined ? this.tick() : opts.at
     if (at > this.clock) this.clock = at
+    this.appended++
     return this.base.append({ op: 'put-edge', edge, at, by: this.name, source })
   }
 
@@ -202,6 +283,7 @@ class SwarmStore extends ReadyResource {
     const source = opts.source || 'scan'
     const at = opts.at === undefined ? this.tick() : opts.at
     if (at > this.clock) this.clock = at
+    this.appended++
     return this.base.append({ op: 'del-node', id, at, by: this.name, source })
   }
 
@@ -211,6 +293,7 @@ class SwarmStore extends ReadyResource {
     const source = opts.source || 'scan'
     const at = opts.at === undefined ? this.tick() : opts.at
     if (at > this.clock) this.clock = at
+    this.appended++
     return this.base.append({ op: 'del-edge', edge, at, by: this.name, source })
   }
 
@@ -219,6 +302,7 @@ class SwarmStore extends ReadyResource {
     if (!this.opened) await this.ready()
     const at = opts.at === undefined ? this.tick() : opts.at
     if (at > this.clock) this.clock = at
+    this.appended++
     return this.base.append({ op: 'put-meta', key, value, at })
   }
 
@@ -290,3 +374,4 @@ class SwarmStore extends ReadyResource {
 }
 
 module.exports = SwarmStore
+module.exports.readRemembered = readRemembered
