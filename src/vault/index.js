@@ -124,7 +124,9 @@ async function resolveVaultDir(start) {
  * @returns {Promise<VaultSource>}
  */
 async function loadVault(start, opts = {}) {
-  const vaultDir = (await isFile(start)) ? path.dirname(path.resolve(start)) : await resolveVaultDir(start)
+  const vaultDir = (await isFile(start))
+    ? path.dirname(path.resolve(start))
+    : await resolveVaultDir(start)
   const raw = await readUtf8(path.join(vaultDir, INDEX_FILE))
   const memory = parseIndex(raw)
   const humanById = await loadHumanNotes(path.join(vaultDir, NOTES_DIR))
@@ -143,7 +145,7 @@ async function loadVault(start, opts = {}) {
 function parseIndex(raw) {
   const text = stripBom(raw)
   const parsed = JSON.parse(text)
-  if (parsed.version != null && parsed.version !== 1) {
+  if (parsed.version !== undefined && parsed.version !== null && parsed.version !== 1) {
     throw new Error(
       `Vault escrita con schema v${parsed.version}; SwarmMemory espera v1. Re-escaneá con stellar-memory.`
     )
@@ -335,7 +337,10 @@ function raiseSeverity(node, next) {
 }
 
 function toGraphId(type, rawId) {
-  const rest = typeof rawId === 'string' && rawId.includes(':') ? rawId.slice(rawId.indexOf(':') + 1) : String(rawId)
+  const rest =
+    typeof rawId === 'string' && rawId.includes(':')
+      ? rawId.slice(rawId.indexOf(':') + 1)
+      : String(rawId)
   const slug = rest
     .replace(/[/\\]+/g, '-')
     .replace(/#/g, '-')
@@ -459,7 +464,9 @@ function indexOfLineMarker(body, marker, from = 0) {
   while (at !== -1) {
     const startsLine = at === 0 || body[at - 1] === '\n'
     const after = body.slice(at + marker.length)
-    if (startsLine && (after === '' || after.startsWith('\n') || after.startsWith('\r\n'))) return at
+    if (startsLine && (after === '' || after.startsWith('\n') || after.startsWith('\r\n'))) {
+      return at
+    }
     at = body.indexOf(marker, at + marker.length)
   }
   return -1

@@ -6,7 +6,9 @@ summary: Resumen generado por el scan.
 ---
 
 <!-- stellar-memory:auto -->
+
 Generado por el scanner. No debe aparecer en el summary del grafo.
+
 <!-- /stellar-memory:auto -->
 
 ## Notes

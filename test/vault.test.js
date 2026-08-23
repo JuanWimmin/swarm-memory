@@ -1,10 +1,6 @@
 const { test } = require('brittle')
 const path = require('bare-path')
-const {
-  loadVault,
-  NODE_TYPES,
-  EDGE_TYPES
-} = require('../src/vault/index.js')
+const { loadVault, NODE_TYPES, EDGE_TYPES } = require('../src/vault/index.js')
 
 const fixture = path.join(__dirname, 'fixtures', 'vault')
 
@@ -74,11 +70,7 @@ test('loadVault mapea index.json + notas al contrato §4.1', async (t) => {
       (e) => e.from === 'contract/payroll' && e.to === dep.id && e.type === 'deployed_as'
     )
   )
-  t.ok(
-    graph.edges.some(
-      (e) => e.from === note.id && e.to === fn.id && e.type === 'notes'
-    )
-  )
+  t.ok(graph.edges.some((e) => e.from === note.id && e.to === fn.id && e.type === 'notes'))
 
   for (const edge of graph.edges) {
     t.ok(EDGE_TYPES.includes(edge.type), edge.type)
@@ -139,7 +131,11 @@ test('generateHtmlReport sustituye /*__GRAPH_DATA__*/', async (t) => {
   const os = require('bare-os')
   const fs = require('bare-fs')
   const { from } = require('../src/core/graph.js')
-  const { generateHtmlReport, injectGraphData, GRAPH_PLACEHOLDER } = require('../src/render/html.js')
+  const {
+    generateHtmlReport,
+    injectGraphData,
+    GRAPH_PLACEHOLDER
+  } = require('../src/render/html.js')
   const { runGraph } = require('../src/commands/graph.js')
 
   const source = await loadVault(fixture)
@@ -149,7 +145,9 @@ test('generateHtmlReport sustituye /*__GRAPH_DATA__*/', async (t) => {
   const html = await generateHtmlReport(graph, template)
   t.absent(html.includes(GRAPH_PLACEHOLDER), 'el marcador no debe quedar')
   t.ok(html.includes('const GRAPH = '))
-  t.ok(html.includes('"project":"private-payroll"') || html.includes('"project": "private-payroll"'))
+  t.ok(
+    html.includes('"project":"private-payroll"') || html.includes('"project": "private-payroll"')
+  )
 
   const start = html.indexOf('const GRAPH = ') + 'const GRAPH = '.length
   const end = html.indexOf(';', start)
