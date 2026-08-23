@@ -134,3 +134,45 @@ test('resume formatea header, contratos, señales y tareas', async (t) => {
   })
   t.ok(chunks.join('\n').includes('SwarmMemory'))
 })
+
+test('generateHtmlReport sustituye /*__GRAPH_DATA__*/', async (t) => {
+  const os = require('bare-os')
+  const fs = require('bare-fs')
+  const { from } = require('../src/core/graph.js')
+  const { generateHtmlReport, injectGraphData, GRAPH_PLACEHOLDER } = require('../src/render/html.js')
+  const { runGraph } = require('../src/commands/graph.js')
+
+  const source = await loadVault(fixture)
+  const graph = from(source)
+  const template = path.join(__dirname, 'fixtures', 'template.html')
+
+  const html = await generateHtmlReport(graph, template)
+  t.absent(html.includes(GRAPH_PLACEHOLDER), 'el marcador no debe quedar')
+  t.ok(html.includes('const GRAPH = '))
+  t.ok(html.includes('"project":"private-payroll"') || html.includes('"project": "private-payroll"'))
+
+  const start = html.indexOf('const GRAPH = ') + 'const GRAPH = '.length
+  const end = html.indexOf(';', start)
+  const parsed = JSON.parse(html.slice(start, end))
+  t.ok(Array.isArray(parsed.nodes) && Array.isArray(parsed.edges) && parsed.meta)
+  t.ok(parsed.nodes.some((n) => n.id === 'contract/payroll'))
+
+  const stub = 'const GRAPH = /*__GRAPH_DATA__*/;'
+  const injected = injectGraphData(stub, { meta: { project: 'x' }, nodes: [], edges: [] })
+  t.is(injected, 'const GRAPH = {"meta":{"project":"x"},"nodes":[],"edges":[]};')
+  t.exception(() => injectGraphData('<html></html>', graph))
+
+  const out = path.join(os.tmpdir(), 'swarm-memory-graph-test.html')
+  const result = await runGraph({
+    vault: fixture,
+    html: out,
+    json: false,
+    template,
+    write: () => {}
+  })
+  t.is(result.htmlPath, out)
+  const written = await fs.readFile(out, 'utf8')
+  const text = typeof written === 'string' ? written : written.toString('utf8')
+  t.absent(text.includes(GRAPH_PLACEHOLDER))
+  t.ok(text.includes('private-payroll'))
+})

@@ -9,6 +9,7 @@ import pkg from './package.json'
 
 const require = createRequire(import.meta.url)
 const { runResume } = require('./src/commands/resume.js')
+const { runGraph } = require('./src/commands/graph.js')
 
 const appName = pkg.productName || pkg.name
 const isDev = path.basename(Bare.argv[0]) === (isWindows ? 'bare.exe' : 'bare')
@@ -19,6 +20,14 @@ const resumeCmd = command(
   flag('--vault <dir>', 'project root or .stellar-memory directory')
 )
 
+const graphCmd = command(
+  'graph',
+  summary('Export graph.json (§4.1) and/or a self-contained HTML viewer'),
+  flag('--vault <dir>', 'project root or .stellar-memory directory'),
+  flag('--json [file]', 'write graph.json to stdout (or to file)'),
+  flag('--html [file]', 'inject graph into web/template.html (default graph.html)')
+)
+
 const cmd = command(
   appName,
   summary(pkg.description),
@@ -26,7 +35,8 @@ const cmd = command(
   flag('--storage <dir>', 'custom storage directory'),
   flag('--no-updates', 'disable OTA updates for this run'),
   flag('--vault <dir>', 'project root or .stellar-memory directory'),
-  resumeCmd
+  resumeCmd,
+  graphCmd
 )
 
 const parsed = cmd.parse(Bare.argv.slice(isDev ? 2 : 1))
@@ -37,10 +47,23 @@ if (cmd.flags.version) {
 }
 
 const invoked = cmd.current ? cmd.current.name : null
-const vault = (cmd.current && cmd.current.flags.vault) || cmd.flags.vault
+const leaf = cmd.current || cmd
+const vault = leaf.flags.vault || cmd.flags.vault
 if (!invoked || invoked === 'resume') {
   try {
     await runResume({ vault, cwd: os.cwd() })
+  } catch (err) {
+    console.error(err.message || err)
+    Bare.exit(1)
+  }
+} else if (invoked === 'graph') {
+  try {
+    await runGraph({
+      vault,
+      cwd: os.cwd(),
+      json: leaf.flags.json,
+      html: leaf.flags.html
+    })
   } catch (err) {
     console.error(err.message || err)
     Bare.exit(1)
@@ -56,7 +79,7 @@ try {
   App = require('./app.js')
 } catch (err) {
   console.error('[app:error] updater unavailable:', err.message || err)
-  Bare.exit(invoked && invoked !== 'resume' ? 1 : 0)
+  Bare.exit(invoked && invoked !== 'resume' && invoked !== 'graph' ? 1 : 0)
 }
 
 console.log(`Updates: ${updates === false ? 'disabled' : 'enabled'}`)

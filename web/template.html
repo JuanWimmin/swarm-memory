@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SwarmMemory</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+        background: #0d1117;
+        color: #e6edf3;
+      }
+      #meta {
+        padding: 16px 20px;
+        font-size: 18px;
+      }
+      #hint {
+        padding: 0 20px 16px;
+        color: #8b949e;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="meta"></div>
+    <div id="hint">
+      F: replace this stub with the interactive graph. Keep the GRAPH line below.
+    </div>
+    <script>
+      const GRAPH = /*__GRAPH_DATA__*/;
+      const meta = document.getElementById('meta')
+      meta.textContent =
+        (GRAPH && GRAPH.meta && GRAPH.meta.project ? GRAPH.meta.project : 'SwarmMemory') +
+        ' · ' +
+        ((GRAPH && GRAPH.nodes && GRAPH.nodes.length) || 0) +
+        ' nodes'
+    </script>
+  </body>
+</html>
