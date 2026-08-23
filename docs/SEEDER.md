@@ -6,6 +6,19 @@
 > `pear install pear://<key>` works for the judges, so the link must be **owned and seeded from a
 > machine on a normal network** (home router / VPS with public IP). Anyone on the team can do it.
 
+## Who serves the link right now
+
+**B1's Windows machine owns and seeds `pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy`.**
+It holds the writer key (in `%APPDATA%\pear`), it is the only machine that can publish a release,
+and it must stay awake with `pear seed` running until judging ends (~17:00 ART).
+
+Redundancy: `.github/workflows/reseed.yaml` runs two keyless reseeders (ubuntu + windows) that pull
+the drive and serve it on. Any teammate can add another with one command — see Option A.
+
+Why not CI as the owner: a runner that stages from an Actions-cache restore which did not carry the
+drive blobs **forks the drive**, and every `pear install` then dies with
+`ERR_INVALID_MANIFEST: Unable to read application package.json`. We lost two links that way.
+
 ## Option A — teammate machine at home (15 min, recommended)
 
 Requirements: Node.js ≥ 20, the machine stays on (lid open, no sleep) until **Sun 23-Aug ~17:00 ART**.

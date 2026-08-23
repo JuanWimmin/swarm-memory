@@ -314,6 +314,9 @@ Caveats:
 | 2026-08-22 ~18:05 | 0.1.2 | _see `ota-test.yaml` run_ | 6 arches | PASS | _OTA 0.1.1 → 0.1.2 under test_ | publisher+installer run in parallel on CI |
 | 2026-08-23 08:20 | 0.1.3 | staged by `seed.yaml` | 6 arches | re-checking | pending | **seeding was broken all night**: `pear seed` exits when stdin is at EOF in CI, so the step "succeeded" in 20 s while nothing was served. Fixed with an open stdin + restart loop. |
 | 2026-08-23 08:35 | 0.1.3 | `seed.yaml` run 32614134486 | 6 arches | verifying | — | plus keyless `reseed.yaml` (ubuntu + windows) and a local reseeder on B1 box, now on a home network |
+| 2026-08-23 08:45 | — | — | — | — | — | CI-owned link `amu47sy…` **forked** (runner staged from a cache restore without the drive blobs). Link ownership moved to B1 box: `pear touch` → `pear://ino4ymu38…`, rebuilt so the binaries carry it |
+| 2026-08-23 08:50 | 0.1.4 | `pear://0.8.ino4ymu38…` | all 6 (474 MB) | **PASS — 8 s** (GitHub windows runner, run 32615114204) | — | staged and seeded from B1 box; `NAT type consistent` here, unlike the university network |
+| 2026-08-23 ~09:05 | 0.1.5 | _pending_ | all 6 | — | _OTA 0.1.4 → 0.1.5 under test_ | includes B2 vault/core/render merged via PR #1 |
 
 ## 10. Troubleshooting
 
