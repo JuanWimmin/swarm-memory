@@ -82,6 +82,22 @@ Merging is where the product opinion lives: automatic scans are last-writer-wins
 wrote (`type: "note"`) is **never** clobbered by a scanner. Machines may refresh facts; they may not
 erase what a person decided to say.
 
+## Graph viewer
+
+`web/template.html` is the self-contained viewer B2 injects via `swarm-memory graph --html`.
+Keep the line `const GRAPH = /*__GRAPH_DATA__*/;` — `src/render/html.js` replaces `/*__GRAPH_DATA__*/`
+with `JSON.stringify(graph)`.
+
+```sh
+swarm-memory graph --html graph.html
+# or, without the CLI:
+node web/inject-graph.mjs --in web/mock-graph.json --out graph.html
+```
+
+![SwarmMemory graph](docs/shots/graph-overview.png)
+
+![Critical node](docs/shots/graph-critical.png)
+
 ## Development
 
 Requires Node.js (for tooling) and the Pear CLI.

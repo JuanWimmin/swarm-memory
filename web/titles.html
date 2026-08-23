@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SwarmMemory — video cards</title>
+    <style>
+      :root {
+        --bg: #0b0f14;
+        --pear: #c6e05a;
+        --star: #f4c95d;
+        --text: #e8eef6;
+        --muted: #8b9bb0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      nav {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 2;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+        border: 1px solid #243041;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      nav a.on,
+      nav a:hover {
+        color: var(--text);
+        border-color: #3a4d22;
+      }
+      body.clean nav {
+        display: none;
+      }
+      .card {
+        display: none;
+        height: 100%;
+        place-items: center;
+        text-align: center;
+        padding: 48px;
+      }
+      .card.show {
+        display: grid;
+      }
+      .mark {
+        font-size: 72px;
+        margin-bottom: 12px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 64px;
+        letter-spacing: 0.02em;
+      }
+      h1 span {
+        color: var(--pear);
+      }
+      p {
+        margin: 14px 0 0;
+        font-size: 28px;
+        color: var(--muted);
+        max-width: 820px;
+      }
+      .lower {
+        position: fixed;
+        left: 48px;
+        bottom: 48px;
+        display: none;
+        align-items: center;
+        gap: 14px;
+        background: rgba(18, 24, 33, 0.92);
+        border: 1px solid #35521a;
+        border-radius: 16px;
+        padding: 14px 22px;
+      }
+      .lower.show {
+        display: flex;
+      }
+      .lower .dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--pear);
+      }
+      .lower strong {
+        display: block;
+        font-size: 28px;
+      }
+      .lower span {
+        color: var(--muted);
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="#title">Title</a>
+      <a href="#end">End</a>
+      <a href="#peer-a">Peer A</a>
+      <a href="#peer-b">Peer B</a>
+    </nav>
+    <section class="card" id="title">
+      <div>
+        <div class="mark">🍐⭐</div>
+        <h1>SwarmMemory <span>live</span></h1>
+        <p>Team memory for smart-contract projects. Shared over the swarm. Installed with Pear. No server.</p>
+      </div>
+    </section>
+    <section class="card" id="end">
+      <div>
+        <div class="mark">🍐</div>
+        <h1>Zero infra. Evergreen binary.</h1>
+        <p>pear install pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy</p>
+      </div>
+    </section>
+    <div class="lower" id="peer-a">
+      <div class="dot"></div>
+      <div>
+        <strong>Peer A · seed machine</strong>
+        <span>Publishes the vault · stages OTA releases</span>
+      </div>
+    </div>
+    <div class="lower" id="peer-b">
+      <div class="dot" style="background: #f4c95d"></div>
+      <div>
+        <strong>Peer B · clean install</strong>
+        <span>pear install · join invite · receives OTA</span>
+      </div>
+    </div>
+    <script>
+      const clean = new URLSearchParams(location.search).get("clean") === "1";
+      if (clean) document.body.classList.add("clean");
+      function show() {
+        const hash = (location.hash || "#title").slice(1);
+        document.querySelectorAll("nav a").forEach((a) => {
+          a.classList.toggle("on", a.getAttribute("href") === "#" + hash);
+        });
+        document.querySelectorAll(".card, .lower").forEach((el) => {
+          el.classList.toggle("show", el.id === hash);
+        });
+      }
+      window.addEventListener("hashchange", show);
+      show();
+    </script>
+  </body>
+</html>
