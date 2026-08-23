@@ -134,7 +134,7 @@ $ swarm-memory --version
 swarm-memory v0.1.7
 ```
 
-Released version is **0.1.9**, six platforms in one 474 MB drive, verlink
+Released version is **0.1.10**, six platforms in one 474 MB drive, verlink
 `pear://0.29.ino4ymu38…`. Release procedure, deploy log and the staging quirks are in
 [`docs/DEPLOY.md`](docs/DEPLOY.md); keeping the link available is [`docs/SEEDER.md`](docs/SEEDER.md).
 

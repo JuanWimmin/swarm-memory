@@ -198,8 +198,14 @@ async function note({ dir, name, text, about }) {
  * Render the project and keep re-rendering as peers write. This is the view that a shared
  * document cannot give you: a teammate's note appears here without anyone refreshing anything.
  */
-async function watch({ dir, name }) {
-  const store = await openStore(dir, { name })
+/**
+ * Paint the project and keep repainting as peers write. This is the view a shared document
+ * cannot give you: a teammate's note lands here with nothing to refresh.
+ *
+ * @param {object} store an open SwarmStore
+ * @param {object} [opts] { invite } — keep an invite code pinned above the view
+ */
+async function liveView(store, opts = {}) {
   let timer = null
   let last = ''
 
@@ -210,16 +216,21 @@ async function watch({ dir, name }) {
       snap.nodes.length === 0
         ? '\n  ' + c.bold(c.green('🍐 SwarmMemory')) + c.dim(' · waiting for the swarm…')
         : renderResume(snap.meta, snap.nodes, snap.edges, snap.info)
-    if (body === last) return
-    last = body
-    console.log('\u001b[2J\u001b[H') // clear, home
-    console.log(body)
-    console.log(
+    const footer =
       '  ' +
-        c.dim('live · ') +
-        c.bold(String(store.peers)) +
-        c.dim(' peer' + (store.peers === 1 ? '' : 's') + ' · Ctrl+C to stop')
-    )
+      c.dim('live · ') +
+      c.bold(String(store.peers)) +
+      c.dim(' peer' + (store.peers === 1 ? '' : 's') + ' · Ctrl+C to stop')
+    const frame = body + '\n' + footer
+    if (frame === last) return
+    last = frame
+
+    console.log('\u001b[2J\u001b[H') // clear, home
+    if (opts.invite) {
+      console.log('  ' + c.bold('Invite code') + c.dim(' (single use) — your teammate runs:'))
+      console.log('    ' + c.cyan('swarm-memory join ' + opts.invite))
+    }
+    console.log(frame)
   }
 
   await paint()
@@ -227,7 +238,11 @@ async function watch({ dir, name }) {
     if (timer) return
     timer = setTimeout(() => paint().catch(() => {}), 250)
   })
+}
 
+async function watch({ dir, name }) {
+  const store = await openStore(dir, { name })
+  await liveView(store)
   return store
 }
 
@@ -254,14 +269,10 @@ async function publish({ dir, name, file, demo }) {
 async function invite({ dir, name }) {
   const store = await openStore(dir, { name })
   const code = await store.createInvite()
-  console.log('')
-  console.log('  ' + c.bold('Invite code') + c.dim(' (single use)'))
-  console.log('  ' + c.green(code))
-  console.log('')
-  console.log('  ' + c.dim('Your teammate runs:'))
-  console.log('    ' + c.cyan('swarm-memory join ' + code))
-  console.log('')
-  console.log('  ' + c.dim('Keep this process running until they join — pairing happens live.'))
+
+  // The code has to survive the repaints, so it is pinned above the live view. Pairing only
+  // happens while this process is online, which is why the command does not exit.
+  await liveView(store, { invite: code })
   return store
 }
 
@@ -337,5 +348,6 @@ module.exports = {
   graph,
   renderResume,
   graphJSON,
+  liveView,
   slugify
 }

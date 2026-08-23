@@ -10,7 +10,7 @@ Deadline **Sun 23-Aug 12:00 ART** · judging from 13:00 ART · **keep seeding un
 | Repo | https://github.com/JuanWimmin/swarm-memory (public, branch `master`) |
 | Template + variant | `holepunchto/hello-pear-bare`, branch **`main`** (OTA updater in a Bare worker thread) — stated in the README |
 | Platforms in the drive | win32-x64, win32-arm64, darwin-x64, darwin-arm64, linux-x64, linux-arm64 (474 MB, all six) |
-| Released version | **0.1.9** — adds `note` and the live `resume --watch`; the viewer is bundled so `graph --html` works from a fresh install |
+| Released version | **0.1.10** — `note`, live `resume --watch`, and `invite` now holds the live view with the code pinned |
 | Video (≤3 min, English) | **owner: F** — must show `pear install` on a clean machine and an OTA update landing |
 | Track | Pears |
 
@@ -81,8 +81,7 @@ swarm-memory resume
 swarm-memory graph --html graph.html   # opens offline, no CDN
 
 # 3. a second peer, no server — the shot that carries the whole idea
-swarm-memory resume --watch    # terminal A — the live view, left open on camera
-swarm-memory invite            # terminal A (second tab) — prints the code, stays online
+swarm-memory invite            # terminal A — pins the code above a live view and stays online
 swarm-memory join <code>       # terminal B — replicates the graph in ~4 s
 swarm-memory note "LastPaid has no extend_ttl - a payment can become unreachable" \
     --about storage/payroll.lastpaid          # terminal B writes...
