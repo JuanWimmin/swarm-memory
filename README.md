@@ -214,7 +214,7 @@ $ swarm-memory --version
 swarm-memory v0.1.7
 ```
 
-Released version is **0.1.10**, six platforms in one 474 MB drive, verlink
+Released version is **0.1.11**, six platforms in one 474 MB drive, verlink
 `pear://0.29.ino4ymu38…`. Release procedure, deploy log and the staging quirks are in
 [`docs/DEPLOY.md`](docs/DEPLOY.md); keeping the link available is [`docs/SEEDER.md`](docs/SEEDER.md).
 
@@ -381,7 +381,7 @@ npm run make              # standalone binary for this host → out/<platform>-<
 npm run lint              # prettier + lunte
 ```
 
-`bare test/index.js` is 29 tests / 534 asserts green. Seven of them are the P2P suite and pair two
+`bare test/index.js` is 39 tests / 589 asserts green. Seven of them are the P2P suite and pair two
 real peers on a local DHT testnet: they replicate, converge, and the merge policy is asserted —
 stale scans rejected, human notes protected, lamport clock restart-safe.
 
