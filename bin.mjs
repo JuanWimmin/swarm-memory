@@ -4,30 +4,60 @@ import process from 'bare-process'
 import os from 'bare-os'
 import { isWindows } from 'which-runtime'
 import path from 'bare-path'
+import { createRequire } from 'bare-module'
 import pkg from './package.json'
-import App from './app.js'
+
+const require = createRequire(import.meta.url)
+const { runResume } = require('./src/commands/resume.js')
 
 const appName = pkg.productName || pkg.name
 const isDev = path.basename(Bare.argv[0]) === (isWindows ? 'bare.exe' : 'bare')
+
+const resumeCmd = command(
+  'resume',
+  summary('Project memory overview from a local .stellar-memory vault'),
+  flag('--vault <dir>', 'project root or .stellar-memory directory')
+)
 
 const cmd = command(
   appName,
   summary(pkg.description),
   flag('--version|-v', 'Print the current version'),
   flag('--storage <dir>', 'custom storage directory'),
-  flag('--no-updates', 'disable OTA updates for this run')
+  flag('--no-updates', 'disable OTA updates for this run'),
+  flag('--vault <dir>', 'project root or .stellar-memory directory'),
+  resumeCmd
 )
 
-cmd.parse(Bare.argv.slice(isDev ? 2 : 1))
-if (cmd.flags.help) Bare.exit()
+const parsed = cmd.parse(Bare.argv.slice(isDev ? 2 : 1))
+if (!parsed || parsed.flags.help) Bare.exit()
 if (cmd.flags.version) {
   console.log(`${appName} v${pkg.version}`)
   Bare.exit()
 }
 
+const invoked = cmd.current ? cmd.current.name : null
+const vault = (cmd.current && cmd.current.flags.vault) || cmd.flags.vault
+if (!invoked || invoked === 'resume') {
+  try {
+    await runResume({ vault, cwd: os.cwd() })
+  } catch (err) {
+    console.error(err.message || err)
+    Bare.exit(1)
+  }
+}
+
 const updates = cmd.flags.updates
 const storage = cmd.flags.storage || (isDev ? null : path.join(persistent(), appName))
 const dir = storage || path.join(os.tmpdir(), 'pear', appName)
+
+let App
+try {
+  App = require('./app.js')
+} catch (err) {
+  console.error('[app:error] updater unavailable:', err.message || err)
+  Bare.exit(invoked && invoked !== 'resume' ? 1 : 0)
+}
 
 console.log(`Updates: ${updates === false ? 'disabled' : 'enabled'}`)
 
