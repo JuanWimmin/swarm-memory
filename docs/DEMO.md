@@ -74,7 +74,7 @@ pear install pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy
 > at 5–8 s on clean GitHub-hosted Windows runners. `swarm-memory` is now on the PATH.
 
 ```sh
-swarm-memory --version         # swarm-memory v0.1.10
+swarm-memory --version         # swarm-memory v0.1.12
 swarm-memory status            # version, storage path, updates: enabled, the upgrade link
 ```
 
@@ -223,9 +223,9 @@ Peer B's view repaints by itself. Nobody refreshed anything.
 > **Proves:** every peer is a writer and the view is live. This is the shot that separates the
 > project from a markdown file in a repo.
 
-If B has not repainted after a couple of seconds, start `swarm-memory --storage ./peer-a --as Ana`
-on A and leave it online — A stays connected and the append replicates. Cheap insurance; if you only
-get one take, start it before the write.
+`note` does not return until a peer has acknowledged the write, so by the time the prompt comes
+back the note is already on B. If nobody is online it says so — `saved locally — no peer online
+right now, it syncs when one connects` — instead of pretending it synced.
 
 Then say the rule out loud, because it is the product opinion:
 
