@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "project": {
+    "name": "private-payroll",
+    "networks": ["testnet"]
+  },
+  "nodes": [
+    {
+      "id": "crate:payroll",
+      "kind": "crate",
+      "title": "payroll",
+      "summary": "Debe ignorarse: no está en §4.1."
+    },
+    {
+      "id": "contract:Payroll",
+      "kind": "contract",
+      "title": "Payroll",
+      "summary": "Paga empleados desde Treasury.",
+      "data": {
+        "functions": ["initialize", "pay", "set_pay_token", "last_paid"]
+      }
+    },
+    {
+      "id": "function:Payroll.set_pay_token",
+      "kind": "function",
+      "title": "set_pay_token",
+      "summary": "Cambia el token de pago.",
+      "data": {
+        "requiresAuth": false,
+        "visibility": "public"
+      }
+    },
+    {
+      "id": "storage:Payroll.LastPaid",
+      "kind": "storage",
+      "title": "DataKey::LastPaid(employee)",
+      "summary": "Último pago por empleado.",
+      "data": {
+        "durability": "persistent",
+        "key": "LastPaid",
+        "hasTtlExtension": false
+      }
+    },
+    {
+      "id": "event:Payroll.paid",
+      "kind": "event",
+      "title": "paid",
+      "summary": "Emitido en cada pago exitoso."
+    },
+    {
+      "id": "error:PayrollError",
+      "kind": "error",
+      "title": "PayrollError",
+      "summary": "Errores del contrato Payroll.",
+      "data": {
+        "variants": [
+          { "name": "NotInitialized", "code": 1 },
+          { "name": "Unauthorized", "code": 2 }
+        ]
+      }
+    },
+    {
+      "id": "deployment:testnet.CA2UTEST",
+      "kind": "deployment",
+      "title": "payroll @ testnet",
+      "summary": "Live at testnet.",
+      "data": {
+        "network": "testnet",
+        "contractId": "CA2U…TWRN",
+        "drift": "stale"
+      }
+    },
+    {
+      "id": "decision:pay-token-decision",
+      "kind": "decision",
+      "title": "Decisión: token configurable",
+      "summary": "Resumen generado por el scan."
+    },
+    {
+      "id": "task:contracts/payroll/src/test.rs#23",
+      "kind": "task",
+      "title": "Test e2e de pay() con Treasury real",
+      "summary": "Pendiente en payroll/src/test.rs:23"
+    }
+  ],
+  "edges": [
+    {
+      "from": "contract:Payroll",
+      "to": "function:Payroll.set_pay_token",
+      "kind": "defines"
+    },
+    {
+      "from": "function:Payroll.set_pay_token",
+      "to": "storage:Payroll.LastPaid",
+      "kind": "writes"
+    },
+    {
+      "from": "function:Payroll.set_pay_token",
+      "to": "event:Payroll.paid",
+      "kind": "emits"
+    },
+    {
+      "from": "function:Payroll.set_pay_token",
+      "to": "error:PayrollError",
+      "kind": "raises"
+    },
+    {
+      "from": "contract:Payroll",
+      "to": "deployment:testnet.CA2UTEST",
+      "kind": "deployed_as"
+    },
+    {
+      "from": "decision:pay-token-decision",
+      "to": "function:Payroll.set_pay_token",
+      "kind": "documents"
+    },
+    {
+      "from": "task:contracts/payroll/src/test.rs#23",
+      "to": "function:Payroll.set_pay_token",
+      "kind": "mentions"
+    },
+    {
+      "from": "crate:payroll",
+      "to": "contract:Payroll",
+      "kind": "defines"
+    }
+  ],
+  "scans": [
+    {
+      "at": "2026-08-22T20:00:00.000Z",
+      "nodeCount": 8,
+      "edgeCount": 8,
+      "changed": []
+    }
+  ]
+}

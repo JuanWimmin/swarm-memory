@@ -10,3 +10,7 @@ test('package metadata is release-ready', (t) => {
 })
 
 require('./sync.test.js')
+
+// B2's vault/core/render suite talks to bare-fs and bare-path, which only exist
+// on Bare. Node runs the sync suite; `npm test` (brittle-bare) runs everything.
+if (typeof Bare !== 'undefined') require('./vault.test.js')
