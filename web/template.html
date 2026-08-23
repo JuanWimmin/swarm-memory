@@ -1,36 +1,771 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>SwarmMemory</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SwarmMemory — project graph</title>
     <style>
+      :root {
+        --bg: #0b0f14;
+        --bg-2: #121821;
+        --panel: #161d27;
+        --line: #243041;
+        --text: #e8eef6;
+        --muted: #8b9bb0;
+        --pear: #c6e05a;
+        --star: #f4c95d;
+        --warn: #f5b942;
+        --critical: #ff5c6c;
+        --info: #7ec8e3;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
       body {
         margin: 0;
-        font-family: sans-serif;
-        background: #0d1117;
-        color: #e6edf3;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
       }
-      #meta {
-        padding: 16px 20px;
+      body {
+        display: grid;
+        grid-template-rows: auto auto 1fr;
+        min-height: 100%;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, #141b24 0%, var(--bg) 100%);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+      .mark {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: #1c2618;
+        border: 1px solid #3a4d22;
+        font-size: 22px;
+        flex-shrink: 0;
+      }
+      h1 {
+        margin: 0;
+        font-size: 26px;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      h1 span {
+        color: var(--pear);
+      }
+      .sub {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .pill {
+        border: 1px solid var(--line);
+        background: var(--bg-2);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .pill.swarm {
+        border-color: #35521a;
+        background: #182214;
+        color: var(--pear);
+      }
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border-bottom: 1px solid var(--line);
+        background: #0e131a;
+      }
+      .filters .sep {
+        width: 1px;
+        align-self: stretch;
+        background: var(--line);
+        margin: 0 4px;
+      }
+      #filters {
+        display: contents;
+      }
+      .chip {
+        flex: 0 0 auto;
+        appearance: none;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--muted);
+        border-radius: 999px;
+        padding: 9px 13px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .chip.on {
+        color: var(--text);
+        background: #1a2430;
+      }
+      .chip .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: 1px;
+      }
+      .stage {
+        position: relative;
+        min-height: 0;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: grab;
+      }
+      canvas.grabbing {
+        cursor: grabbing;
+      }
+      .empty,
+      .error {
+        position: absolute;
+        inset: 0;
+        display: none;
+        place-items: center;
+        text-align: center;
+        padding: 32px;
+      }
+      .empty.show,
+      .error.show {
+        display: grid;
+      }
+      .empty h2,
+      .error h2 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      .empty p,
+      .error p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+        max-width: 420px;
+      }
+      .hint {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        color: var(--muted);
+        font-size: 12px;
+        pointer-events: none;
+      }
+      aside {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: min(360px, calc(100% - 24px));
+        max-height: calc(100% - 24px);
+        overflow: auto;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 18px;
+        transform: translateX(24px);
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 180ms ease,
+          transform 180ms ease;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+      }
+      aside.open {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+      }
+      .panel-kicker {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .panel-title {
+        margin: 6px 0 10px;
+        font-size: 28px;
+        line-height: 1.2;
+      }
+      .sev {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 4px 9px;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .sev.info {
+        background: #17313a;
+        color: var(--info);
+      }
+      .sev.warn {
+        background: #3a2d10;
+        color: var(--warn);
+      }
+      .sev.critical {
+        background: #3a1218;
+        color: var(--critical);
+      }
+      .summary {
+        margin: 14px 0 0;
         font-size: 18px;
+        line-height: 1.45;
       }
-      #hint {
-        padding: 0 20px 16px;
-        color: #8b949e;
+      .links {
+        margin-top: 16px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .links div {
+        margin: 4px 0;
+      }
+      .close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 22px;
+        cursor: pointer;
+      }
+      @media (max-width: 720px) {
+        header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        h1 {
+          font-size: 18px;
+        }
+        aside {
+          top: auto;
+          bottom: 0;
+          right: 0;
+          width: 100%;
+          max-height: 46%;
+          border-radius: 16px 16px 0 0;
+          transform: translateY(24px);
+        }
+        aside.open {
+          transform: none;
+        }
       }
     </style>
   </head>
   <body>
-    <div id="meta"></div>
-    <div id="hint">F: replace this stub with the interactive graph. Keep the GRAPH line below.</div>
+    <header>
+      <div class="brand">
+        <div class="mark" aria-hidden="true">🍐</div>
+        <div>
+          <h1>SwarmMemory <span>⭐</span> <span id="project">—</span></h1>
+          <p class="sub">Live team memory for a Soroban project — no server.</p>
+        </div>
+      </div>
+      <div class="meta">
+        <div class="pill" id="counts">0 nodes · 0 edges</div>
+        <div class="pill swarm" id="peers">0 peers connected</div>
+        <div class="pill" id="source">source: —</div>
+      </div>
+    </header>
+    <div class="filters" role="toolbar" aria-label="Graph filters">
+      <button class="chip" type="button" id="risks">risks</button>
+      <button class="chip" type="button" id="focus">focus</button>
+      <span class="sep" aria-hidden="true"></span>
+      <div id="filters"></div>
+    </div>
+    <div class="stage">
+      <canvas id="graph"></canvas>
+      <div class="empty" id="empty">
+        <div>
+          <h2>No graph yet</h2>
+          <p>Run <code>swarm-memory graph --html</code> so the CLI can inject vault data into this viewer.</p>
+        </div>
+      </div>
+      <div class="error" id="error">
+        <div>
+          <h2>Could not read the graph</h2>
+          <p id="error-msg">The injected GRAPH payload is missing or invalid.</p>
+        </div>
+      </div>
+      <div class="hint">Drag to pan · scroll to zoom · click a node · R risks · F focus neighbors</div>
+      <aside id="panel" aria-live="polite">
+        <button class="close" type="button" id="close" aria-label="Close">×</button>
+        <div class="panel-kicker" id="p-type">node</div>
+        <h2 class="panel-title" id="p-label"></h2>
+        <div class="panel-kicker" id="p-id" style="margin: 0 0 10px; letter-spacing: 0.04em; text-transform: none;"></div>
+        <span class="sev info" id="p-sev">info</span>
+        <p class="summary" id="p-summary"></p>
+        <div class="links" id="p-links"></div>
+      </aside>
+    </div>
     <script>
       const GRAPH = /*__GRAPH_DATA__*/;
-      const meta = document.getElementById('meta')
-      meta.textContent =
-        (GRAPH && GRAPH.meta && GRAPH.meta.project ? GRAPH.meta.project : 'SwarmMemory') +
-        ' · ' +
-        ((GRAPH && GRAPH.nodes && GRAPH.nodes.length) || 0) +
-        ' nodes'
+
+      const TYPES = [
+        "contract",
+        "function",
+        "storage",
+        "event",
+        "error",
+        "deployment",
+        "note",
+        "task"
+      ];
+      const COLORS = {
+        contract: "#5ee0c5",
+        function: "#6ea8ff",
+        storage: "#b794f6",
+        event: "#7ddea0",
+        error: "#ff9f68",
+        deployment: "#9aa8b8",
+        note: "#f4c95d",
+        task: "#f0a0c4"
+      };
+      const SIZES = {
+        contract: 18,
+        function: 11,
+        storage: 10,
+        event: 10,
+        error: 11,
+        deployment: 12,
+        note: 12,
+        task: 11
+      };
+
+      const canvas = document.getElementById("graph");
+      const ctx = canvas.getContext("2d");
+      const panel = document.getElementById("panel");
+      const emptyEl = document.getElementById("empty");
+      const errorEl = document.getElementById("error");
+
+      let graph = { meta: {}, nodes: [], edges: [] };
+      let sim = [];
+      let activeTypes = new Set(TYPES);
+      let risksOnly = false;
+      let isolate = false;
+      let selected = null;
+      let hover = null;
+      let transform = { x: 0, y: 0, k: 1 };
+      let dragging = null;
+      let panning = null;
+      let born = 0;
+
+      function fail(msg) {
+        document.getElementById("error-msg").textContent = msg;
+        errorEl.classList.add("show");
+      }
+
+      try {
+        if (typeof GRAPH === "undefined" || GRAPH === null) {
+          emptyEl.classList.add("show");
+        } else if (!GRAPH.nodes || !GRAPH.edges) {
+          fail("GRAPH must include nodes[] and edges[].");
+        } else if (!GRAPH.nodes.length) {
+          emptyEl.classList.add("show");
+        } else {
+          graph = GRAPH;
+          boot();
+        }
+      } catch (err) {
+        fail(err.message || String(err));
+      }
+
+      function boot() {
+        const meta = graph.meta || {};
+        document.getElementById("project").textContent = meta.project || "untitled";
+        const peers = Number(meta.peers || 0);
+        document.getElementById("peers").textContent =
+          peers === 1 ? "1 peer connected" : peers + " peers connected";
+        const when = meta.generatedAt ? " · " + String(meta.generatedAt).replace("T", " ").replace("Z", " UTC") : "";
+        document.getElementById("source").textContent = "source: " + (meta.source || "local") + when;
+        document.getElementById("counts").textContent =
+          graph.nodes.length + " nodes · " + graph.edges.length + " edges";
+        document.title = "SwarmMemory — " + (meta.project || "graph");
+
+        const bar = document.getElementById("filters");
+        TYPES.forEach((type) => {
+          const count = graph.nodes.filter((n) => n.type === type).length;
+          if (!count) return;
+          const btn = document.createElement("button");
+          btn.className = "chip on";
+          btn.type = "button";
+          btn.dataset.type = type;
+          btn.innerHTML =
+            '<span class="dot" style="background:' +
+            COLORS[type] +
+            '"></span>' +
+            type +
+            " " +
+            count;
+          btn.addEventListener("click", () => {
+            if (activeTypes.has(type) && activeTypes.size === 1) return;
+            if (activeTypes.has(type)) activeTypes.delete(type);
+            else activeTypes.add(type);
+            btn.classList.toggle("on", activeTypes.has(type));
+            if (selected && !visible(selected)) {
+              selected = null;
+              panel.classList.remove("open");
+            }
+          });
+          bar.appendChild(btn);
+        });
+
+        document.getElementById("risks").addEventListener("click", () => {
+          risksOnly = !risksOnly;
+          document.getElementById("risks").classList.toggle("on", risksOnly);
+        });
+        document.getElementById("focus").addEventListener("click", () => {
+          if (!selected) return;
+          isolate = !isolate;
+          document.getElementById("focus").classList.toggle("on", isolate);
+        });
+
+        const W = 900;
+        const H = 640;
+        sim = graph.nodes.map((n, i) => {
+          const angle = (i / graph.nodes.length) * Math.PI * 2;
+          const ring = n.type === "contract" ? 90 : 220;
+          return {
+            ...n,
+            x: Math.cos(angle) * ring + (Math.random() - 0.5) * 40,
+            y: Math.sin(angle) * ring + (Math.random() - 0.5) * 40,
+            vx: 0,
+            vy: 0,
+            r: SIZES[n.type] || 10
+          };
+        });
+        const byId = Object.fromEntries(sim.map((n) => [n.id, n]));
+        sim.links = graph.edges
+          .map((e) => ({ ...e, a: byId[e.from], b: byId[e.to] }))
+          .filter((e) => e.a && e.b);
+
+        born = performance.now();
+        resize();
+        transform.x = canvas.width / (window.devicePixelRatio || 1) / 2;
+        transform.y = canvas.height / (window.devicePixelRatio || 1) / 2;
+        loop();
+        bind();
+        applyQuery();
+      }
+
+      function applyQuery() {
+        let q;
+        try {
+          q = new URLSearchParams(location.search);
+        } catch (err) {
+          return;
+        }
+        if (q.get("risks") === "1") {
+          risksOnly = true;
+          document.getElementById("risks").classList.add("on");
+        }
+        const id = q.get("select");
+        if (id) {
+          const n = sim.find((x) => x.id === id);
+          if (n) openPanel(n);
+        }
+        if (q.get("focus") === "1" && selected) {
+          isolate = true;
+          document.getElementById("focus").classList.add("on");
+        }
+      }
+
+      function visible(n) {
+        if (!activeTypes.has(n.type)) return false;
+        if (risksOnly && n.severity !== "warn" && n.severity !== "critical") return false;
+        if (isolate && selected) {
+          if (n === selected) return true;
+          return sim.links.some(function (e) {
+            return (e.a === selected && e.b === n) || (e.b === selected && e.a === n);
+          });
+        }
+        return true;
+      }
+
+      function resize() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = Math.max(1, rect.width * dpr);
+        canvas.height = Math.max(1, rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function step() {
+        const nodes = sim;
+        const links = sim.links;
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const a = nodes[i];
+            const b = nodes[j];
+            let dx = a.x - b.x;
+            let dy = a.y - b.y;
+            let dist = Math.hypot(dx, dy) || 0.01;
+            const min = a.r + b.r + 38;
+            const force = ((min * min) / (dist * dist)) * 0.35;
+            dx /= dist;
+            dy /= dist;
+            a.vx += dx * force;
+            a.vy += dy * force;
+            b.vx -= dx * force;
+            b.vy -= dy * force;
+          }
+        }
+        for (const e of links) {
+          const dx = e.b.x - e.a.x;
+          const dy = e.b.y - e.a.y;
+          const dist = Math.hypot(dx, dy) || 0.01;
+          const rest = e.type === "notes" ? 90 : 130;
+          const k = ((dist - rest) / dist) * 0.02;
+          e.a.vx += dx * k;
+          e.a.vy += dy * k;
+          e.b.vx -= dx * k;
+          e.b.vy -= dy * k;
+        }
+        for (const n of nodes) {
+          n.vx += (-n.x) * 0.004;
+          n.vy += (-n.y) * 0.004;
+          n.vx *= 0.82;
+          n.vy *= 0.82;
+          if (n !== dragging) {
+            n.x += n.vx;
+            n.y += n.vy;
+          }
+        }
+      }
+
+      function world(ev) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: (ev.clientX - rect.left - transform.x) / transform.k,
+          y: (ev.clientY - rect.top - transform.y) / transform.k
+        };
+      }
+
+      function hit(p) {
+        for (let i = sim.length - 1; i >= 0; i--) {
+          const n = sim[i];
+          if (!visible(n)) continue;
+          if (Math.hypot(n.x - p.x, n.y - p.y) <= n.r + 6) return n;
+        }
+        return null;
+      }
+
+      function openPanel(n) {
+        selected = n;
+        document.getElementById("p-type").textContent = n.type;
+        document.getElementById("p-label").textContent = n.label;
+        document.getElementById("p-id").textContent = n.id;
+        document.getElementById("p-summary").textContent = n.summary || "No summary.";
+        const sev = document.getElementById("p-sev");
+        sev.textContent = n.severity || "info";
+        sev.className = "sev " + (n.severity || "info");
+        const related = sim.links
+          .filter((e) => e.a === n || e.b === n)
+          .map((e) => {
+            const other = e.a === n ? e.b : e.a;
+            return e.type + " → " + other.label;
+          });
+        const extras = n.data
+          ? Object.keys(n.data).map((k) => k + ": " + String(n.data[k]))
+          : [];
+        document.getElementById("p-links").innerHTML =
+          (related.length ? related.map((t) => "<div>" + t + "</div>").join("") : "<div>No edges on this node.</div>") +
+          (extras.length ? "<div style=\"margin-top:8px\">" + extras.join(" · ") + "</div>" : "");
+        panel.classList.add("open");
+      }
+
+      function bind() {
+        window.addEventListener("resize", resize);
+        canvas.addEventListener("pointerdown", (ev) => {
+          canvas.setPointerCapture(ev.pointerId);
+          const p = world(ev);
+          const n = hit(p);
+          if (n) {
+            dragging = n;
+            openPanel(n);
+          } else {
+            panning = { x: ev.clientX - transform.x, y: ev.clientY - transform.y };
+            canvas.classList.add("grabbing");
+            panel.classList.remove("open");
+            selected = null;
+            isolate = false;
+            const focusBtn = document.getElementById("focus");
+            if (focusBtn) focusBtn.classList.remove("on");
+          }
+        });
+        canvas.addEventListener("pointermove", (ev) => {
+          const p = world(ev);
+          hover = hit(p);
+          if (dragging) {
+            dragging.x = p.x;
+            dragging.y = p.y;
+            dragging.vx = 0;
+            dragging.vy = 0;
+          } else if (panning) {
+            transform.x = ev.clientX - panning.x;
+            transform.y = ev.clientY - panning.y;
+          }
+          canvas.style.cursor = hover ? "pointer" : panning ? "grabbing" : "grab";
+        });
+        canvas.addEventListener("pointerup", () => {
+          dragging = null;
+          panning = null;
+          canvas.classList.remove("grabbing");
+        });
+        canvas.addEventListener(
+          "wheel",
+          (ev) => {
+            ev.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mx = ev.clientX - rect.left;
+            const my = ev.clientY - rect.top;
+            const prev = transform.k;
+            const next = Math.min(2.6, Math.max(0.35, prev * (ev.deltaY > 0 ? 0.92 : 1.08)));
+            transform.x = mx - ((mx - transform.x) * next) / prev;
+            transform.y = my - ((my - transform.y) * next) / prev;
+            transform.k = next;
+          },
+          { passive: false }
+        );
+        document.getElementById("close").addEventListener("click", () => {
+          panel.classList.remove("open");
+          selected = null;
+          isolate = false;
+          const focusBtn = document.getElementById("focus");
+          if (focusBtn) focusBtn.classList.remove("on");
+        });
+        window.addEventListener("keydown", (ev) => {
+          if (ev.key === "Escape") {
+            panel.classList.remove("open");
+            selected = null;
+            isolate = false;
+            const focusBtn = document.getElementById("focus");
+            if (focusBtn) focusBtn.classList.remove("on");
+          }
+          if (ev.key === "r" || ev.key === "R") {
+            const risksBtn = document.getElementById("risks");
+            if (risksBtn) risksBtn.click();
+          }
+          if (ev.key === "f" || ev.key === "F") {
+            const focusBtn = document.getElementById("focus");
+            if (focusBtn) focusBtn.click();
+          }
+        });
+      }
+
+      function draw() {
+        const w = canvas.width / (window.devicePixelRatio || 1);
+        const h = canvas.height / (window.devicePixelRatio || 1);
+        ctx.clearRect(0, 0, w, h);
+        ctx.save();
+        ctx.translate(transform.x, transform.y);
+        ctx.scale(transform.k, transform.k);
+
+        const t = Math.min(1, (performance.now() - born) / 700);
+        const ease = 1 - Math.pow(1 - t, 3);
+
+        for (const e of sim.links) {
+          if (!visible(e.a) || !visible(e.b)) continue;
+          const hot = selected && (e.a === selected || e.b === selected);
+          ctx.beginPath();
+          ctx.moveTo(e.a.x, e.a.y);
+          ctx.lineTo(e.b.x, e.b.y);
+          ctx.strokeStyle = hot ? "rgba(198, 224, 90, 0.85)" : "rgba(180, 198, 216, 0.28)";
+          ctx.lineWidth = hot ? 2.2 : e.type === "calls" ? 1.6 : 1.1;
+          ctx.stroke();
+        }
+
+        for (const n of sim) {
+          if (!visible(n)) continue;
+          const color = COLORS[n.type] || "#fff";
+          const r = n.r * ease;
+          if (n.severity === "critical") {
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, r + 8 + Math.sin(performance.now() / 180) * 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255, 92, 108, 0.22)";
+            ctx.fill();
+          } else if (n.severity === "warn") {
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, r + 6, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(245, 185, 66, 0.85)";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+          }
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          if (selected === n || hover === n) {
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = "#fff";
+            ctx.stroke();
+          }
+          if (
+            n.type === "contract" ||
+            n.severity === "warn" ||
+            n.severity === "critical" ||
+            hover === n ||
+            selected === n
+          ) {
+            ctx.font = "700 14px ui-sans-serif, system-ui, sans-serif";
+            ctx.fillStyle = "#e8eef6";
+            ctx.textAlign = "center";
+            ctx.fillText(n.label, n.x, n.y + r + 16);
+          }
+        }
+        ctx.restore();
+      }
+
+      function loop() {
+        for (let i = 0; i < 2; i++) step();
+        draw();
+        requestAnimationFrame(loop);
+      }
     </script>
   </body>
 </html>

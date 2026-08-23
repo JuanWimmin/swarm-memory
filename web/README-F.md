@@ -24,6 +24,20 @@ El CLI reemplaza `/*__GRAPH_DATA__*/` por el JSON real. Para desarrollar, copia 
 6. Muestra `meta.project` como título y `meta.peers` ("2 peers conectados") en una esquina.
 7. Tema oscuro (único tema está bien) y legible en un video a 1080p — fuentes grandes.
 
+## Local preview (sin tocar el placeholder)
+
+```sh
+node web/serve-preview.mjs
+```
+
+Sirve `template.html` con `mock-graph.json` inyectado en `http://127.0.0.1:43147/`. El archivo commiteado debe seguir teniendo `const GRAPH = /*__GRAPH_DATA__*/;`.
+
+Para un HTML `file://` listo para el video:
+
+```sh
+node web/inject-graph.mjs --in web/mock-graph.json --out graph.html
+```
+
 ## Prompt sugerido para tu IA (ajústalo a tu gusto)
 
 > Create a single self-contained HTML file with no external resources (no CDN, no fonts from the internet) that renders a knowledge graph from a JSON variable declared as `const GRAPH = /*__GRAPH_DATA__*/;`. Nodes have {id, type, label, summary, severity}; edges have {from, to, type}. Draw an interactive force-directed graph on a canvas: color nodes by type, highlight severity "warn" in amber and "critical" in red, click a node to open a side panel with its details, add type filter chips, dark theme, large readable text. Here is sample data: (pega mock-graph.json)
