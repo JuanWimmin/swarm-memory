@@ -10,7 +10,7 @@ Deadline **Sun 23-Aug 12:00 ART** · judging from 13:00 ART · **keep seeding un
 | Repo | https://github.com/JuanWimmin/swarm-memory (public, branch `master`) |
 | Template + variant | `holepunchto/hello-pear-bare`, branch **`main`** (OTA updater in a Bare worker thread) — stated in the README |
 | Platforms in the drive | win32-x64, win32-arm64, darwin-x64, darwin-arm64, linux-x64, linux-arm64 (474 MB, all six) |
-| Released version | 0.1.5 · verlink `pear://0.15.ino4ymu38…` |
+| Released version | **0.1.7** · verlink `pear://0.22.ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy` |
 | Video (≤3 min, English) | **owner: F** — must show `pear install` on a clean machine and an OTA update landing |
 | Track | Pears |
 
@@ -18,8 +18,23 @@ Deadline **Sun 23-Aug 12:00 ART** · judging from 13:00 ART · **keep seeding un
 
 | Requirement | Evidence |
 | --- | --- |
-| `pear install pear://<key>` works on a clean machine | GitHub Actions run `32615114204` (fresh windows-latest runner): install completed in **8 s**, binary ran `--version` |
-| P2P OTA updates work end to end | `install-test.yaml` with an OTA window: a copy installed at 0.1.4 picked up 0.1.5 from the swarm — `[updater] getting new update` → `update complete... applying` → `applied update` |
+| `pear install pear://<key>` works on a clean machine | GitHub Actions run `32615845671` (fresh windows-latest runner, v0.1.7): install completed in **6 s**; earlier run `32615114204` did it in 8 s |
+| P2P OTA updates work end to end | A running **v0.1.5** copy picked up **v0.1.7** from the swarm with no user action and reported `--version` = 0.1.7 afterwards: |
+
+```
+Updates: enabled
+Application storage: ...\store\app-storage
+Hello from worker
+[updater] getting new update
+[updater] update complete... applying
+[updater] applied update, restart to run latest version
+
+$ swarm-memory --version
+swarm-memory v0.1.7
+```
+
+| | |
+| --- | --- |
 | Runs on Bare, not Node | `bare test/index.js`: 11 tests / 155 asserts green (7 tests / 37 asserts are the P2P suite, pairing two peers over a local DHT testnet) |
 | Multi-platform binaries | `build.yaml` builds 6 targets with `bare-build`, merged by `pear-build` into one `by-arch` deployment |
 

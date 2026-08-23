@@ -110,8 +110,9 @@ pear stage  pear://<key> ./deployment                # publish the release into 
 pear seed   pear://<key>                             # keep it available to peers
 ```
 
-An installed copy watches the `upgrade` link in its own `package.json`, downloads the new version
-over the swarm and applies it — `[updater] getting new update` → `update complete... applying` →
+Verified end to end: a running **v0.1.5** copy picked up **v0.1.7** off the swarm on its own, and a
+clean machine installs in **6 seconds**. An installed copy watches the `upgrade` link in its own
+`package.json`, downloads the new version over the swarm and applies it — `[updater] getting new update` → `update complete... applying` →
 `applied update`. Seeding is documented in [`docs/SEEDER.md`](docs/SEEDER.md).
 
 ## Code reuse disclosure
