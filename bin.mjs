@@ -77,11 +77,16 @@ const resume = command(
 const publish = command(
   'publish',
   summary('Import a graph export into the swarm'),
-  flag('--graph <file>', 'graph.json to import (default: demo/graph.json)'),
+  flag('--graph <file>', 'graph.json to import'),
+  flag('--demo', 'load the bundled demo project (private-payroll)'),
   ...shared(),
   () =>
     oneShot(publish, (base) =>
-      commands.publish({ ...base, file: publish.flags.graph || 'demo/graph.json' })
+      commands.publish({
+        ...base,
+        file: publish.flags.graph || 'demo/graph.json',
+        demo: publish.flags.demo || !publish.flags.graph
+      })
     )()
 )
 

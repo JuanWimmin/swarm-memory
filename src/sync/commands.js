@@ -8,6 +8,7 @@ const path = require('bare-path')
 const c = require('./colors.js')
 
 const { openStore } = require('./index.js')
+const demoGraph = require('../../demo/graph.json')
 
 const TYPE_COLOR = {
   contract: c.cyan,
@@ -142,8 +143,10 @@ async function resume({ dir, name }) {
     console.log('  ' + c.bold(c.green('🍐 SwarmMemory')) + c.dim(' · empty store'))
     console.log('  ' + c.dim(store.id))
     console.log('')
-    console.log('  Nothing here yet. Seed it from a graph export:')
-    console.log('    ' + c.cyan('swarm-memory publish --graph demo/graph.json'))
+    console.log('  Nothing here yet. Load the demo project:')
+    console.log('    ' + c.cyan('swarm-memory publish --demo'))
+    console.log('  or import your own export:')
+    console.log('    ' + c.cyan('swarm-memory publish --graph graph.json'))
     console.log('  or join a teammate:')
     console.log('    ' + c.cyan('swarm-memory join <invite-code>'))
     console.log('')
@@ -153,9 +156,9 @@ async function resume({ dir, name }) {
   return store
 }
 
-async function publish({ dir, name, file }) {
+async function publish({ dir, name, file, demo }) {
   const store = await openStore(dir, { name })
-  const raw = JSON.parse(fs.readFileSync(file, 'utf8'))
+  const raw = demo ? demoGraph : JSON.parse(fs.readFileSync(file, 'utf8'))
   const nodes = raw.nodes || []
   const edges = raw.edges || []
 
