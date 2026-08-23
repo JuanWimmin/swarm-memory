@@ -9,6 +9,7 @@ const c = require('./colors.js')
 
 const { openStore } = require('./index.js')
 const demoGraph = require('../../demo/graph.json')
+const bundledTemplate = require('../../web/template.generated.js')
 
 const TYPE_COLOR = {
   contract: c.cyan,
@@ -227,16 +228,12 @@ async function graph({ dir, name, json, html }) {
   }
 
   if (html) {
+    // prefer the working copy (so F can iterate without a rebuild), else the bundled one
     const template = findTemplate()
-    if (!template) {
-      console.log(c.yellow('web/template.html not found — skipping HTML export'))
-    } else {
-      const page = fs
-        .readFileSync(template, 'utf8')
-        .replace('/*__GRAPH_DATA__*/', JSON.stringify(data))
-      fs.writeFileSync(html, page)
-      console.log(c.green('wrote ') + html)
-    }
+    const raw = template ? fs.readFileSync(template, 'utf8') : bundledTemplate
+    const page = raw.replace('/*__GRAPH_DATA__*/', JSON.stringify(data))
+    fs.writeFileSync(html, page)
+    console.log(c.green('wrote ') + html + (template ? '' : c.dim(' (bundled viewer)')))
   }
 
   if (!json && !html) console.log(JSON.stringify(data, null, 2))
