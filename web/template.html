@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -31,7 +31,7 @@
           ui-sans-serif,
           system-ui,
           -apple-system,
-          "Segoe UI",
+          'Segoe UI',
           Roboto,
           sans-serif;
       }
@@ -323,7 +323,10 @@
       <div class="empty" id="empty">
         <div>
           <h2>No graph yet</h2>
-          <p>Run <code>swarm-memory graph --html</code> so the CLI can inject vault data into this viewer.</p>
+          <p>
+            Run <code>swarm-memory graph --html</code> so the CLI can inject vault data into this
+            viewer.
+          </p>
         </div>
       </div>
       <div class="error" id="error">
@@ -332,12 +335,18 @@
           <p id="error-msg">The injected GRAPH payload is missing or invalid.</p>
         </div>
       </div>
-      <div class="hint">Drag to pan · scroll to zoom · click a node · R risks · F focus neighbors</div>
+      <div class="hint">
+        Drag to pan · scroll to zoom · click a node · R risks · F focus neighbors
+      </div>
       <aside id="panel" aria-live="polite">
         <button class="close" type="button" id="close" aria-label="Close">×</button>
         <div class="panel-kicker" id="p-type">node</div>
         <h2 class="panel-title" id="p-label"></h2>
-        <div class="panel-kicker" id="p-id" style="margin: 0 0 10px; letter-spacing: 0.04em; text-transform: none;"></div>
+        <div
+          class="panel-kicker"
+          id="p-id"
+          style="margin: 0 0 10px; letter-spacing: 0.04em; text-transform: none"
+        ></div>
         <span class="sev info" id="p-sev">info</span>
         <p class="summary" id="p-summary"></p>
         <div class="links" id="p-links"></div>

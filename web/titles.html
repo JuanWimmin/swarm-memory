@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -25,7 +25,7 @@
           ui-sans-serif,
           system-ui,
           -apple-system,
-          "Segoe UI",
+          'Segoe UI',
           sans-serif;
       }
       nav {
@@ -124,7 +124,10 @@
       <div>
         <div class="mark">🍐⭐</div>
         <h1>SwarmMemory <span>live</span></h1>
-        <p>Team memory for smart-contract projects. Shared over the swarm. Installed with Pear. No server.</p>
+        <p>
+          Team memory for smart-contract projects. Shared over the swarm. Installed with Pear. No
+          server.
+        </p>
       </div>
     </section>
     <section class="card" id="end">
@@ -149,19 +152,19 @@
       </div>
     </div>
     <script>
-      const clean = new URLSearchParams(location.search).get("clean") === "1";
-      if (clean) document.body.classList.add("clean");
+      const clean = new URLSearchParams(location.search).get('clean') === '1'
+      if (clean) document.body.classList.add('clean')
       function show() {
-        const hash = (location.hash || "#title").slice(1);
-        document.querySelectorAll("nav a").forEach((a) => {
-          a.classList.toggle("on", a.getAttribute("href") === "#" + hash);
-        });
-        document.querySelectorAll(".card, .lower").forEach((el) => {
-          el.classList.toggle("show", el.id === hash);
-        });
+        const hash = (location.hash || '#title').slice(1)
+        document.querySelectorAll('nav a').forEach((a) => {
+          a.classList.toggle('on', a.getAttribute('href') === '#' + hash)
+        })
+        document.querySelectorAll('.card, .lower').forEach((el) => {
+          el.classList.toggle('show', el.id === hash)
+        })
       }
-      window.addEventListener("hashchange", show);
-      show();
+      window.addEventListener('hashchange', show)
+      show()
     </script>
   </body>
 </html>
