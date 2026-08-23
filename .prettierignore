@@ -6,3 +6,6 @@ web/mock-graph.json
 deployment/
 out/
 package-lock.json
+# Real scanned Soroban project — vault notes and Rust sources are input data,
+# not our source. Formatting them would rewrite the scan.
+demo/private-payroll/

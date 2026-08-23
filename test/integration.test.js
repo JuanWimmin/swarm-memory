@@ -119,13 +119,19 @@ test('resume renders the project without throwing', async (t) => {
   const { store, out } = await run(() => commands.resume({ dir: SHARED, name: 'alice' }))
   t.teardown(() => store.close())
 
-  t.ok(out.includes('SwarmMemory'), 'header')
-  t.ok(out.includes('private-payroll'), 'project name')
+  t.ok(out.includes('private-payroll'), 'project name leads')
   t.ok(out.includes('23 nodes'), 'node count')
   t.ok(out.includes('25 edges'), 'edge count')
-  t.ok(out.includes('contract'), 'nodes grouped by type')
+  t.ok(out.includes('Contracts'), 'contracts get a section')
+  t.ok(out.includes('On-chain'), 'deployments get a section')
+  t.ok(out.includes('Worth knowing'), 'flagged nodes get their own section')
   t.ok(out.includes('!!'), 'critical severity marker')
-  t.ok(out.includes('needs attention'), 'flagged nodes get their own section')
+  t.ok(out.includes('Notes'), 'human notes get a section of their own')
+  t.ok(out.includes('Open tasks'), 'tasks get a section')
+  // a deployment belongs to On-chain, never repeated under Worth knowing
+  const worth = out.slice(out.indexOf('Worth knowing'), out.indexOf('Notes'))
+  t.absent(worth.includes('@ testnet'), 'a node appears in exactly one section')
+  t.absent(out.includes('storages'), 'counts read like English')
 
   await store.close()
 })

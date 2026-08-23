@@ -283,14 +283,17 @@ function applySignals(memory, nodes, idMap) {
     if (node.kind === 'storage' && missingTtlExtension(node.data)) {
       raiseSeverity(target, 'critical')
       if (!target.summary) {
-        target.summary = `Clave persistent sin extend_ttl: puede expirar y volverse inalcanzable.`
+        target.summary = `Persistent key with no extend_ttl: it can expire and become unreachable.`
       }
     }
 
     if (node.kind === 'deployment' && node.data?.drift === 'stale') {
       raiseSeverity(target, 'warn')
       if (!/\bdrift\b/i.test(target.summary || '')) {
-        target.summary = [target.summary, 'Out of sync: Wasm desplegado distinto al build local.']
+        target.summary = [
+          target.summary,
+          'Out of sync: the deployed Wasm differs from the local build.'
+        ]
           .filter(Boolean)
           .join(' ')
       }
@@ -308,7 +311,7 @@ function applySignals(memory, nodes, idMap) {
       if (!requiresAuth && mutating.has(node.id)) {
         raiseSeverity(target, 'critical')
         if (!/require_auth/.test(target.summary || '')) {
-          target.summary = [target.summary, 'Muta estado y nunca llama require_auth.']
+          target.summary = [target.summary, 'Mutates state and never calls require_auth.']
             .filter(Boolean)
             .join(' ')
         }

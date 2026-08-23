@@ -8,95 +8,14 @@ const path = require('bare-path')
 const c = require('./colors.js')
 
 const { openStore } = require('./index.js')
+const { loadVault } = require('../vault/index.js')
+const view = require('../render/resume.js')
 const demoGraph = require('../../demo/graph.json')
 const bundledTemplate = require('../../web/template.generated.js')
 
-const TYPE_COLOR = {
-  contract: c.cyan,
-  function: c.blue,
-  storage: c.magenta,
-  event: c.green,
-  error: c.red,
-  deployment: c.yellow,
-  note: c.white,
-  task: c.yellow
-}
-
-const SEVERITY_MARK = {
-  critical: c.red('!!'),
-  warn: c.yellow(' !'),
-  info: c.dim('  ')
-}
-
-function paint(type, text) {
-  const fn = TYPE_COLOR[type] || c.white
-  return fn(text)
-}
-
-function line(char = '─', width = 62) {
-  return c.dim(char.repeat(width))
-}
-
-/** Render the project's context: the star view of the CLI. */
+/** Kept as the module's rendering entry point; the layout lives in src/render/resume.js. */
 function renderResume(meta, nodes, edges, info) {
-  const out = []
-  const project = meta.project || '(unnamed project)'
-
-  out.push('')
-  out.push('  ' + c.bold(c.green('🍐 SwarmMemory')) + c.dim(' · ') + c.bold(project))
-  out.push(
-    '  ' +
-      c.dim(
-        `${nodes.length} nodes · ${edges.length} edges · ${info.peers} peer${info.peers === 1 ? '' : 's'} connected · ${info.writable ? 'writer' : 'read-only'}`
-      )
-  )
-  out.push('  ' + c.dim(info.id || ''))
-  out.push('  ' + line())
-
-  const byType = new Map()
-  for (const node of nodes) {
-    if (!byType.has(node.type)) byType.set(node.type, [])
-    byType.get(node.type).push(node)
-  }
-
-  const order = ['contract', 'function', 'storage', 'event', 'error', 'deployment', 'task', 'note']
-  const types = [...byType.keys()].sort((a, b) => {
-    const ia = order.indexOf(a)
-    const ib = order.indexOf(b)
-    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
-  })
-
-  for (const type of types) {
-    const list = byType.get(type)
-    out.push('')
-    out.push('  ' + paint(type, c.bold(type)) + c.dim(` (${list.length})`))
-    for (const node of list.slice(0, 12)) {
-      const mark = SEVERITY_MARK[node.severity] || SEVERITY_MARK.info
-      const label = node.label || node.id
-      out.push('   ' + mark + ' ' + paint(type, label) + (node.by ? c.dim(' · ' + node.by) : ''))
-      if (node.summary) out.push('        ' + c.dim(truncate(node.summary, 68)))
-    }
-    if (list.length > 12) out.push(c.dim(`        … ${list.length - 12} more`))
-  }
-
-  const flagged = nodes.filter((n) => n.severity === 'critical' || n.severity === 'warn')
-  if (flagged.length) {
-    out.push('')
-    out.push('  ' + c.bold('needs attention'))
-    for (const node of flagged) {
-      const mark = SEVERITY_MARK[node.severity]
-      out.push(
-        '   ' +
-          mark +
-          ' ' +
-          (node.label || node.id) +
-          c.dim(' — ' + truncate(node.summary || '', 54))
-      )
-    }
-  }
-
-  out.push('')
-  return out.join('\n')
+  return view.formatProject({ meta, nodes, edges, info })
 }
 
 /** Node ids may not contain '!' (the Hyperbee key separator) — keep them boring. */
@@ -150,17 +69,7 @@ async function resume({ dir, name }) {
   const store = await openStore(dir, { name })
   const snap = await snapshot(store)
   if (snap.nodes.length === 0) {
-    console.log('')
-    console.log('  ' + c.bold(c.green('🍐 SwarmMemory')) + c.dim(' · empty store'))
-    console.log('  ' + c.dim(store.id))
-    console.log('')
-    console.log('  Nothing here yet. Load the demo project:')
-    console.log('    ' + c.cyan('swarm-memory publish --demo'))
-    console.log('  or import your own export:')
-    console.log('    ' + c.cyan('swarm-memory publish --graph graph.json'))
-    console.log('  or join a teammate:')
-    console.log('    ' + c.cyan('swarm-memory join <invite-code>'))
-    console.log('')
+    console.log(view.formatEmpty(store.id))
   } else {
     console.log(renderResume(snap.meta, snap.nodes, snap.edges, snap.info))
   }
@@ -214,13 +123,9 @@ async function liveView(store, opts = {}) {
     const snap = await snapshot(store)
     const body =
       snap.nodes.length === 0
-        ? '\n  ' + c.bold(c.green('🍐 SwarmMemory')) + c.dim(' · waiting for the swarm…')
+        ? view.formatEmpty(store.id)
         : renderResume(snap.meta, snap.nodes, snap.edges, snap.info)
-    const footer =
-      '  ' +
-      c.dim('live · ') +
-      c.bold(String(store.peers)) +
-      c.dim(' peer' + (store.peers === 1 ? '' : 's') + ' · Ctrl+C to stop')
+    const footer = view.formatLiveFooter(store)
     const frame = body + '\n' + footer
     if (frame === last) return
     last = frame
@@ -246,13 +151,36 @@ async function watch({ dir, name }) {
   return store
 }
 
-async function publish({ dir, name, file, demo }) {
+/** Read a scanned vault straight from disk — no swarm, nothing published. */
+async function inspect({ vault }) {
+  const source = await loadVault(vault)
+  const [meta, nodes, edges] = await Promise.all([source.meta(), source.nodes(), source.edges()])
+  console.log(view.formatProject({ meta, nodes, edges, info: { source: 'local' } }))
+  return null
+}
+
+/**
+ * Load a project into the swarm: the bundled demo, a scanned .stellar-memory vault, or a
+ * graph.json export. A vault is the interesting one — it is a real scan of real contracts.
+ */
+async function publish({ dir, name, file, demo, vault }) {
   const store = await openStore(dir, { name })
-  const raw = demo ? demoGraph : JSON.parse(fs.readFileSync(file, 'utf8'))
+
+  let raw
+  if (vault) {
+    const source = await loadVault(vault)
+    raw = { meta: await source.meta(), nodes: await source.nodes(), edges: await source.edges() }
+  } else if (demo) {
+    raw = demoGraph
+  } else {
+    raw = JSON.parse(fs.readFileSync(file, 'utf8'))
+  }
+
   const nodes = raw.nodes || []
   const edges = raw.edges || []
 
   if (raw.meta && raw.meta.project) await store.putMeta('project', raw.meta.project)
+  if (raw.meta && raw.meta.description) await store.putMeta('description', raw.meta.description)
   for (const node of nodes) {
     await store.putNode(node, { source: node.type === 'note' ? 'human' : 'scan' })
   }
@@ -339,6 +267,7 @@ function findTemplate() {
 
 module.exports = {
   resume,
+  inspect,
   watch,
   note,
   publish,

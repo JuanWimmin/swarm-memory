@@ -71,9 +71,16 @@ const resume = command(
   summary('Show the project context from the swarm'),
   description('The star view: contracts, functions, risks and human notes, merged across peers.'),
   flag('--watch|-w', 'keep the view open and repaint as peers write'),
+  flag('--vault <dir>', 'read a scanned .stellar-memory directory instead of the swarm'),
   ...shared(),
-  () =>
-    resume.flags.watch ? longRunning(resume, commands.watch)() : oneShot(resume, commands.resume)()
+  () => {
+    if (resume.flags.vault) {
+      return oneShot(resume, () => commands.inspect({ vault: resume.flags.vault }))()
+    }
+    return resume.flags.watch
+      ? longRunning(resume, commands.watch)()
+      : oneShot(resume, commands.resume)()
+  }
 )
 
 const note = command(
@@ -100,7 +107,8 @@ const publish = command(
       commands.publish({
         ...base,
         file: publish.flags.graph || 'demo/graph.json',
-        demo: publish.flags.demo || !publish.flags.graph
+        vault: publish.flags.vault,
+        demo: publish.flags.demo || !(publish.flags.graph || publish.flags.vault)
       })
     )()
 )
