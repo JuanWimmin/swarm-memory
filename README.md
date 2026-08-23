@@ -1,109 +1,214 @@
-# SwarmMemory 🍐⭐
+# SwarmMemory
 
-> **The living memory of a smart-contract project, shared between your team's peers with no server —
-> installed and updated peer-to-peer through Pear.**
->
-> Aleph Hackathon 2026 · Pears Track
+**A smart-contract project's memory, shared between your team's peers with no server — installed and
+updated peer-to-peer through Pear.**
 
-The context of a Soroban/Stellar project — which contract calls which, where the TTL and auth risks
+Aleph Hackathon 2026 · Pears Track
+
+What a contract project actually knows — which contract calls which, where the TTL and auth risks
 are, what drifted on-chain, the note someone wrote at 3 AM — lives in people's heads and in silos.
-SwarmMemory turns that context into a **knowledge graph the whole team writes to**, replicated
-directly between peers over Hyperswarm. No server, no account, no config: one invite code and a new
-teammate has the whole project's memory in their terminal.
-
-```sh
-pear install pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy
-swarm-memory                 # the project's context, in your terminal
-swarm-memory invite          # → an invite code for a teammate
-swarm-memory join <code>     # they get the graph, live, from the swarm
-```
-
-Updates arrive by themselves: the binary is evergreen, it watches its own `pear://` link and applies
-new releases over the swarm.
-
----
-
-## Install
+Every new person on the team pays for that again. SwarmMemory keeps it as a knowledge graph that
+every peer writes to and every peer holds a full copy of.
 
 ```sh
 pear install pear://ino4ymu381ouhyo14u6sg5ursbto4irt4n5mhhzjkk8a7mwgd6iy
 ```
 
-That is the whole installation — Pear fetches the binary for your platform from peers and puts it on
-your PATH. If you don't have the Pear CLI yet: `npm i -g pear`.
-
-**Platforms in the release drive:** `win32-x64`, `win32-arm64`, `darwin-x64`, `darwin-arm64`,
-`linux-x64`, `linux-arm64` — all six built by GitHub Actions (`.github/workflows/build.yaml`) with
-[`bare-build`](https://github.com/holepunchto/bare-build) and merged into one deployment with
-`pear-build`.
-
-> On macOS/Linux, if an updated binary comes back non-executable: `chmod +x $(which swarm-memory)`.
-> (Known Windows-staging quirk, see `docs/DEPLOY.md` §8.)
-
-## Template: `hello-pear-bare`, branch [`main`](https://github.com/holepunchto/hello-pear-bare/tree/main)
-
-We started from **`holepunchto/hello-pear-bare`, branch `main`** — the variant that runs
-`pear-runtime` (the OTA updater) inside a **Bare worker thread**. That is the right process shape
-here: SwarmMemory is a long-lived TUI holding swarm connections, so update checks and the P2P stack
-stay off the main thread and the terminal never blocks on them.
-
-`app.js` and `workers/main.js` are the template's updater and are deliberately **untouched** — the
-repo even enforces it with a `PreToolUse` hook (`.claude/hooks/guard-updater.js`).
-
-## How it works
+That is the whole installation: Pear fetches the binary for your platform from peers and puts
+`swarm-memory` on your PATH. Measured at 5–8 seconds on clean GitHub-hosted Windows runners. No
+Node.js on the user's machine. If you don't have the Pear CLI yet, `npm i -g pear`.
 
 ```
-swarm-memory (Bare CLI, standalone binary — no Node.js on the user's machine)
-│
-├── bin.mjs                  CLI entrypoint (paparam)
-├── app.js + workers/main.js OTA updater from the template — untouched
-│
-├── src/sync/                the P2P layer
-│   ├── store.js             SwarmStore: Corestore + Autobase (view = Hyperbee) + Hyperswarm
-│   ├── apply.js             merge policy — last-writer-wins by lamport stamp, EXCEPT human notes,
-│   │                        which an automatic scan never overwrites
-│   ├── pairer.js            join by invite code (blind-pairing), no server, no account
-│   └── index.js             openStore(dir, { invite })
-│
-├── src/vault/ src/core/ src/render/   read a .stellar-memory vault, model the graph, paint the TUI
-└── web/template.html        self-contained HTML graph viewer (opens offline, file://)
+$ swarm-memory publish --demo
+published 23 nodes, 25 edges into 555oeqk1mzhu51cc3ijczhojssggonkku8o6zrhjsky1t5hmn5qy
+
+$ swarm-memory note "LastPaid has no extend_ttl - a payment can become unreachable" \
+    --about storage/payroll.lastpaid
+noted note/lastpaid-has-no-extend-ttl-a-payment-can-b-24 → storage/payroll.lastpaid
+
+$ swarm-memory resume
+
+  🍐 SwarmMemory · private-payroll
+  24 nodes · 26 edges · 0 peers connected · writer
+  555oeqk1mzhu51cc3ijczhojssggonkku8o6zrhjsky1t5hmn5qy
+  ──────────────────────────────────────────────────────────────
+
+  contract (4)
+      EmployeeRegistry · Zephy_2
+        Employee and salary registry. 4 functions. Deployed: testnet.
+      pay-token (SAC) · Zephy_2
+        External payment token (Stellar Asset Contract). Outside dependency…
+      Payroll · Zephy_2
+        Pays employees out of Treasury without revealing individual salarie…
+      Treasury · Zephy_2
+        Holds the company funds. Only Payroll may withdraw. 4 functions. De…
+
+  …
+
+  needs attention
+    ! payroll @ testnet — Out of sync: the deployed Wasm is older than the loca…
+    ! PayrollError — 5 variants whose discriminants are published ABI — re…
+    ! Payroll.pay — Pays an employee from Treasury. Missing an end-to-end…
+   !! Payroll.set_pay_token — Changes the payment token. Mutates state and never ca…
+   !! DataKey::LastPaid(employee) — Persistent key with no extend_ttl: it can expire and …
+    ! End-to-end test for pay() with a real Treasury — Open, from payroll/src/test.rs:23
 ```
 
-Every peer is a **writer**: your scans and notes go into your own append-only core, Autobase
-linearizes all the cores into one deterministic view, and the view is a Hyperbee laid out as
+Real output, colours stripped and the middle elided. `Zephy_2` is the peer that wrote each fact — in a team, that column is different names.
+
+## Why this is not a shared markdown file
+
+A document in a repo has one writer at a time, needs a host, and goes stale silently. The mechanisms
+here are different ones:
+
+- **Every peer is a writer.** Each machine appends to its own Hypercore. Nobody has to be online for
+  you to write, and there is no primary copy to lose.
+- **Autobase linearizes the writers into one view.** The cores are merged into a single
+  deterministic order and folded into a Hyperbee. Two peers with the same set of cores compute
+  byte-identical state — the merge is a pure function, not a sync conflict dialog.
+- **No server, no account, no config.** Pairing is one invite code over the public DHT
+  (`blind-pairing`); Hyperswarm finds the peers. There is nothing to deploy and no login.
+- **The binary is evergreen.** It watches its own `pear://` link and applies new releases over the
+  same swarm it uses for data. Nobody re-installs anything.
+
+### The merge policy is the product opinion
+
+`src/sync/apply.js` is 163 lines and one rule: **machines may refresh facts, they may not erase what
+a person decided to say.**
+
+- Automatic writes are last-writer-wins by a lamport stamp `at`, so a stale scan replayed from a
+  peer that was offline loses to a newer one instead of overwriting it.
+- A node of type `note` — the human half — is never overwritten or deleted by a write with
+  `source: 'scan'`. A scanner can add to your memory; it cannot argue with you.
+
+That is enforced inside `apply()`, which Autobase re-runs whenever the linearized order changes, so
+the rule survives reordering and cannot be bypassed by writing directly to the view.
+
+## The commands
+
+|                                                  |                                                                      |
+| ------------------------------------------------ | -------------------------------------------------------------------- |
+| `swarm-memory`                                   | the project's context, then stays open and repaints as peers write   |
+| `swarm-memory resume`                            | print it once and exit                                               |
+| `swarm-memory resume --watch`                    | the live view — a teammate's note lands here with nothing to refresh |
+| `swarm-memory note "…" [--about <id>]`           | write something the team should remember                             |
+| `swarm-memory publish --demo` / `--graph <file>` | load the bundled demo project, or your own export                    |
+| `swarm-memory invite` / `join <code>`            | pair a teammate, no server and no account                            |
+| `swarm-memory peers`                             | connections, writer status, graph size                               |
+| `swarm-memory graph --html <f>` / `--json <f>`   | the offline viewer, or a portable export                             |
+| `swarm-memory status`                            | version, storage, update channel                                     |
+
+## Two peers, one code
 
 ```
-n!<id>                  a node   (contract, function, storage, event, error, deployment, note, task)
-e!<from>!<type>!<to>     an edge  (calls, reads, emits, raises, notes, deployed_as)
+$ swarm-memory invite                       # terminal A — stays online while they join
+
+  Invite code (single use)
+  yryzpzc4zwg5i4ds1gzn7bpw7s17dge6ubypj3dxzbinwie6cr48ehx3behgcq6q4jxdaya787…
+
+  Your teammate runs:
+    swarm-memory join yryzpzc4zwg5i4ds1gzn7bpw7s17dge6ubypj3dxzbinwie6cr48ehx…
+
+  Keep this process running until they join — pairing happens live.
+
+$ swarm-memory join yryzpzc4…               # terminal B, another machine, another network
+pairing…
+joined 1c1c8gqazno9m5tem39tmkr5c3kr964h8t1f1jrw3q1gy75qq1by — 23 nodes replicated
+```
+
+Measured over the public DHT: 23 nodes / 25 edges on peer B, four seconds after the code was pasted.
+`swarm-memory peers` reports connections, writer status and graph size.
+
+## It updates itself
+
+Leave `swarm-memory` running, publish a release, and the installed copy does the rest. A running
+**v0.1.5** picked up **v0.1.7** with no user action:
+
+```
+Updates: enabled
+[updater] getting new update
+[updater] update complete... applying
+[updater] applied update, restart to run latest version
+
+$ swarm-memory --version
+swarm-memory v0.1.7
+```
+
+Released version is **0.1.8**, six platforms in one 474 MB drive, verlink
+`pear://0.29.ino4ymu38…`. Release procedure, deploy log and the staging quirks are in
+[`docs/DEPLOY.md`](docs/DEPLOY.md); keeping the link available is [`docs/SEEDER.md`](docs/SEEDER.md).
+
+## Template: `hello-pear-bare`, branch `main`
+
+We started from [`holepunchto/hello-pear-bare`](https://github.com/holepunchto/hello-pear-bare/tree/main),
+branch **`main`** — the variant that runs the OTA updater (`pear-runtime`) inside a **Bare worker
+thread**. That process shape is the reason we chose it: SwarmMemory is a long-lived TUI holding
+swarm connections open, so update checks download in the worker while the main thread keeps
+replicating and drawing. The single-threaded variant would have the terminal stall on the updater.
+
+`app.js`, `workers/main.js` and the `upgrade` field of `package.json` are the template's updater and
+are deliberately **untouched** — a `PreToolUse` hook (`.claude/hooks/guard-updater.js`) enforces it.
+
+## Architecture
+
+```
+bin.mjs                     CLI entrypoint — paparam, one command per verb
+app.js + workers/main.js    OTA updater from the template — untouched
+
+src/sync/                   the P2P layer
+  store.js       292  SwarmStore: Corestore + Autobase (view = Hyperbee) + Hyperswarm
+  commands.js    255  resume · publish · invite · join · peers · graph
+  apply.js       163  the merge policy — deterministic, replay-safe
+  pairer.js      148  join by invite code (blind-pairing candidate side)
+  colors.js       16  four ANSI escapes, because picocolors cannot run here
+
+src/vault/       529  read a .stellar-memory vault into the frozen graph contract
+src/core/        133  the in-memory graph model — pure JS, no I/O
+src/render/      195  ansi.js paints the TUI · html.js injects the viewer
+web/template.html     the self-contained HTML viewer
+```
+
+Both the local vault and the P2P view implement one frozen interface — `{ nodes(), edges(), meta() }`
+— so `resume` and `graph` do not know or care which one they are reading.
+
+The Hyperbee view is laid out as:
+
+```
+n!<id>                   a node   (contract, function, storage, event, error, deployment, note, task)
+e!<from>!<type>!<to>      an edge  (calls, reads, emits, raises, notes, deployed_as)
 m!<key>                  project metadata
 ```
 
-Merging is where the product opinion lives: automatic scans are last-writer-wins, but a node a human
-wrote (`type: "note"`) is **never** clobbered by a scanner. Machines may refresh facts; they may not
-erase what a person decided to say.
+Keys are ordered, so a node lookup is a `get` and "all edges out of X" is one range read.
 
-## Graph viewer
+### The viewer
 
-`web/template.html` is the self-contained viewer that `swarm-memory graph --html` fills in. It is
-baked into the binary (`scripts/bundle-template.js` → `web/template.generated.js`), so an installed
-copy can write a working viewer with no repo files around; a `web/template.html` next to you still
-wins, so the frontend can iterate without a rebuild.
-Keep the line `const GRAPH = /*__GRAPH_DATA__*/;` — `src/render/html.js` replaces `/*__GRAPH_DATA__*/`
-with `JSON.stringify(graph)`.
-
-```sh
-swarm-memory graph --html graph.html
-# or, without the CLI:
-node web/inject-graph.mjs --in web/mock-graph.json --out graph.html
-```
+`swarm-memory graph --html graph.html` writes one self-contained file — no server, no CDN, opens
+from `file://` months later. `web/template.html` carries `const GRAPH = /*__GRAPH_DATA__*/;` and
+`src/render/html.js` replaces that marker with `JSON.stringify(graph)`. The template is baked into
+the binary (`scripts/bundle-template.js` → `web/template.generated.js`) so an installed copy needs
+no repo files, while a `web/template.html` next to you still wins — the frontend iterates without a
+rebuild.
 
 ![SwarmMemory graph](docs/shots/graph-overview.png)
 
-![Critical node](docs/shots/graph-critical.png)
+## What runs where
 
-## Development
+Bare is not Node.js, and the difference is not cosmetic. There is no `require('fs')`, no
+`process.env`, no `Buffer`, no `node:*`. This app uses `bare-fs`, `bare-path`, `bare-os`,
+`bare-process` and `b4a` for bytes.
 
-Requires Node.js (for tooling) and the Pear CLI.
+The concrete example is `src/sync/colors.js`. `picocolors` is a dependency-free 2 KB library that
+looks perfectly safe — and it reads the Node `process` global at import time, so it throws the
+moment it loads on Bare. We write the four escape codes ourselves. Anything not in the
+[bare modules reference](https://docs.pears.com/reference/modules/bare-modules/) or already in
+`package.json` does not exist until proven otherwise.
+
+## Platforms and development
+
+Binaries for `win32-x64`, `win32-arm64`, `darwin-x64`, `darwin-arm64`, `linux-x64`, `linux-arm64` —
+all six built by GitHub Actions (`.github/workflows/build.yaml`) with `bare-build`, merged into one
+`by-arch` deployment by `pear-build`.
 
 ```sh
 npm install
@@ -114,38 +219,23 @@ npm run make              # standalone binary for this host → out/<platform>-<
 npm run lint              # prettier + lunte
 ```
 
-The test suite covers the P2P layer end to end on the real runtime: two peers pair through an invite
-code, replicate, converge, and the merge policy is asserted (stale scans rejected, human notes
-protected, restart-safe lamport clock). **37/37 asserts green on both Node and Bare.**
-
-## Release & OTA
-
-Documented command by command in [`docs/DEPLOY.md`](docs/DEPLOY.md), with a deploy log. Short version:
-
-```sh
-npm version patch                                   # installed copies compare semver
-gh workflow run build.yaml                          # 6 platforms → by-arch artifact
-pear stage  pear://<key> ./deployment                # publish the release into the drive
-pear seed   pear://<key>                             # keep it available to peers
-```
-
-Verified end to end: a running **v0.1.5** copy picked up **v0.1.7** off the swarm on its own, and a
-clean machine installs in **6 seconds**. An installed copy watches the `upgrade` link in its own
-`package.json`, downloads the new version over the swarm and applies it — `[updater] getting new update` → `update complete... applying` →
-`applied update`. Seeding is documented in [`docs/SEEDER.md`](docs/SEEDER.md).
+`bare test/index.js` is 29 tests / 534 asserts green. Seven of them are the P2P suite and pair two
+real peers on a local DHT testnet: they replicate, converge, and the merge policy is asserted —
+stale scans rejected, human notes protected, lamport clock restart-safe.
 
 ## Code reuse disclosure
 
-The track allows reusing existing code and judges only what was built during the hackathon.
+The track allows reusing existing code and judges what was built during the hackathon.
 
-- **Reused (pre-hackathon, same team, Apache-2.0):** the `.stellar-memory` vault format, the graph
-  model (node/edge types) and the analysis behind the demo dataset come from our earlier
-  `stellar-memory` project. The Rust scanner is **not** part of this entry; the CLI reads vaults that
-  were already scanned.
-- **Built this weekend (what we're submitting):** the whole Pear/Bare application — the CLI, the
-  P2P layer (`src/sync`), the TUI and the HTML viewer, the multi-platform build and CI, and the
-  entire Pear deployment: the app, the `pear://` link and every release are new, as the track
-  requires.
+**Reused** (pre-hackathon, same team, Apache-2.0): the `.stellar-memory` vault format, the graph
+model, and the analysis behind the demo dataset come from our earlier `stellar-memory` project. The
+Rust scanner is **not** part of this entry — this CLI reads vaults that were already scanned.
+
+**Built this weekend** (what we are submitting): the entire Pear/Bare application — the P2P layer,
+the CLI, the TUI, the HTML viewer, the multi-platform build and CI, and the whole Pear deployment.
+The app, the `pear://` link and every release are new.
+
+Judging checklist and evidence: [`docs/SUBMISSION.md`](docs/SUBMISSION.md).
 
 ## License
 

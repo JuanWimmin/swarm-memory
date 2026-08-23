@@ -99,6 +99,16 @@ function renderResume(meta, nodes, edges, info) {
   return out.join('\n')
 }
 
+/** Node ids may not contain '!' (the Hyperbee key separator) — keep them boring. */
+function slugify(text) {
+  const slug = String(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+  return slug || 'note'
+}
+
 function truncate(text, max) {
   const s = String(text).replace(/\s+/g, ' ')
   return s.length > max ? s.slice(0, max - 1) + '…' : s
@@ -154,6 +164,70 @@ async function resume({ dir, name }) {
   } else {
     console.log(renderResume(snap.meta, snap.nodes, snap.edges, snap.info))
   }
+  return store
+}
+
+/**
+ * Write a human note into the graph. Notes are the one thing an automatic scan may never
+ * overwrite (see apply.js), which is what makes them worth writing down.
+ */
+async function note({ dir, name, text, about }) {
+  if (!text || !String(text).trim()) throw new Error('nothing to note — pass some text')
+  const store = await openStore(dir, { name })
+  const at = store.tick()
+  const id = 'note/' + slugify(text) + '-' + at
+
+  await store.putNode(
+    {
+      id,
+      type: 'note',
+      label: truncate(text, 48),
+      summary: String(text).trim(),
+      severity: 'info'
+    },
+    { source: 'human', at }
+  )
+
+  if (about) await store.putEdge({ from: id, to: about, type: 'notes' }, { source: 'human' })
+
+  console.log(c.green('noted ') + c.dim(id) + (about ? c.dim(' → ' + about) : ''))
+  return store
+}
+
+/**
+ * Render the project and keep re-rendering as peers write. This is the view that a shared
+ * document cannot give you: a teammate's note appears here without anyone refreshing anything.
+ */
+async function watch({ dir, name }) {
+  const store = await openStore(dir, { name })
+  let timer = null
+  let last = ''
+
+  const paint = async () => {
+    timer = null
+    const snap = await snapshot(store)
+    const body =
+      snap.nodes.length === 0
+        ? '\n  ' + c.bold(c.green('🍐 SwarmMemory')) + c.dim(' · waiting for the swarm…')
+        : renderResume(snap.meta, snap.nodes, snap.edges, snap.info)
+    if (body === last) return
+    last = body
+    console.log('\u001b[2J\u001b[H') // clear, home
+    console.log(body)
+    console.log(
+      '  ' +
+        c.dim('live · ') +
+        c.bold(String(store.peers)) +
+        c.dim(' peer' + (store.peers === 1 ? '' : 's') + ' · Ctrl+C to stop')
+    )
+  }
+
+  await paint()
+  store.watch(() => {
+    if (timer) return
+    timer = setTimeout(() => paint().catch(() => {}), 250)
+  })
+
   return store
 }
 
@@ -252,4 +326,16 @@ function findTemplate() {
   return null
 }
 
-module.exports = { resume, publish, invite, join, peers, graph, renderResume, graphJSON }
+module.exports = {
+  resume,
+  watch,
+  note,
+  publish,
+  invite,
+  join,
+  peers,
+  graph,
+  renderResume,
+  graphJSON,
+  slugify
+}

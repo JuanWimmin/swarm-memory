@@ -10,199 +10,325 @@
       "id": "contract/payroll",
       "type": "contract",
       "label": "Payroll",
-      "summary": "Paga empleados desde Treasury sin revelar salarios individuales. 4 funciones. Deployed: testnet.",
+      "summary": "Pays employees out of Treasury without revealing individual salaries. 4 functions. Deployed: testnet.",
       "severity": "info",
-      "data": { "functions": 4, "network": "testnet", "drift": true }
+      "data": {
+        "functions": 4,
+        "network": "testnet",
+        "drift": true
+      }
     },
     {
       "id": "contract/treasury",
       "type": "contract",
       "label": "Treasury",
-      "summary": "Custodia los fondos de la empresa. Solo Payroll puede retirar. 4 funciones. Deployed: testnet.",
+      "summary": "Holds the company funds. Only Payroll may withdraw. 4 functions. Deployed: testnet.",
       "severity": "info",
-      "data": { "functions": 4, "network": "testnet" }
+      "data": {
+        "functions": 4,
+        "network": "testnet"
+      }
     },
     {
       "id": "contract/employee-registry",
       "type": "contract",
       "label": "EmployeeRegistry",
-      "summary": "Registro de empleados y salarios. 4 funciones. Deployed: testnet.",
+      "summary": "Employee and salary registry. 4 functions. Deployed: testnet.",
       "severity": "info",
-      "data": { "functions": 4, "network": "testnet" }
+      "data": {
+        "functions": 4,
+        "network": "testnet"
+      }
     },
     {
       "id": "contract/pay-token",
       "type": "contract",
       "label": "pay-token (SAC)",
-      "summary": "Token de pago externo (Stellar Asset Contract). Dependencia externa, sin código local.",
+      "summary": "External payment token (Stellar Asset Contract). Outside dependency, no local source.",
       "severity": "info",
-      "data": { "external": true }
+      "data": {
+        "external": true
+      }
     },
     {
       "id": "function/payroll.initialize",
       "type": "function",
       "label": "Payroll.initialize",
-      "summary": "Configura admin, registry, treasury y pay token.",
+      "summary": "Sets admin, registry, treasury and pay token.",
       "severity": "info"
     },
     {
       "id": "function/payroll.pay",
       "type": "function",
       "label": "Payroll.pay",
-      "summary": "Paga a un empleado desde Treasury. Falta test end-to-end con Treasury real.",
+      "summary": "Pays an employee from Treasury. Missing an end-to-end test against a real Treasury.",
       "severity": "warn"
     },
     {
       "id": "function/payroll.set_pay_token",
       "type": "function",
       "label": "Payroll.set_pay_token",
-      "summary": "Cambia el token de pago. ⚠ Muta estado y NUNCA llama require_auth.",
+      "summary": "Changes the payment token. Mutates state and never calls require_auth.",
       "severity": "critical"
     },
     {
       "id": "function/payroll.last_paid",
       "type": "function",
       "label": "Payroll.last_paid",
-      "summary": "Consulta el último pago de un empleado.",
+      "summary": "Reads the last payment for an employee.",
       "severity": "info"
     },
     {
       "id": "function/treasury.fund",
       "type": "function",
       "label": "Treasury.fund",
-      "summary": "Deposita fondos en la tesorería.",
+      "summary": "Deposits funds into the treasury.",
       "severity": "info"
     },
     {
       "id": "function/treasury.withdraw",
       "type": "function",
       "label": "Treasury.withdraw",
-      "summary": "Retiro restringido a la dirección de Payroll configurada en storage.",
+      "summary": "Withdrawal restricted to the Payroll address configured in storage.",
       "severity": "info"
     },
     {
       "id": "function/registry.set_salary",
       "type": "function",
       "label": "EmployeeRegistry.set_salary",
-      "summary": "Define el salario de un empleado. Auth: admin desde storage.",
+      "summary": "Sets an employee's salary. Auth: admin, loaded from storage.",
       "severity": "info"
     },
     {
       "id": "storage/payroll.lastpaid",
       "type": "storage",
       "label": "DataKey::LastPaid(employee)",
-      "summary": "⚠ Clave persistent sin extend_ttl: puede expirar y volverse inalcanzable.",
+      "summary": "Persistent key with no extend_ttl: it can expire and become unreachable — a Soroban-only footgun.",
       "severity": "critical",
-      "data": { "durability": "persistent", "ttlExtended": false }
+      "data": {
+        "durability": "persistent",
+        "ttlExtended": false
+      }
     },
     {
       "id": "storage/payroll.paytoken",
       "type": "storage",
       "label": "DataKey::PayToken",
-      "summary": "Instance storage. Dirección del token de pago.",
+      "summary": "Instance storage. Address of the payment token.",
       "severity": "info",
-      "data": { "durability": "instance" }
+      "data": {
+        "durability": "instance"
+      }
     },
     {
       "id": "storage/treasury.balance",
       "type": "storage",
       "label": "DataKey::Balance(token)",
-      "summary": "Persistent con extend_ttl correcto.",
+      "summary": "Persistent, with extend_ttl handled correctly.",
       "severity": "info",
-      "data": { "durability": "persistent", "ttlExtended": true }
+      "data": {
+        "durability": "persistent",
+        "ttlExtended": true
+      }
     },
     {
       "id": "storage/registry.salary",
       "type": "storage",
       "label": "DataKey::Salary(employee)",
-      "summary": "Persistent. Salario por empleado.",
+      "summary": "Persistent. Salary per employee.",
       "severity": "info",
-      "data": { "durability": "persistent" }
+      "data": {
+        "durability": "persistent"
+      }
     },
     {
       "id": "event/payroll.paid",
       "type": "event",
       "label": "paid",
-      "summary": "Emitido en cada pago exitoso.",
+      "summary": "Emitted on every successful payment.",
       "severity": "info"
     },
     {
       "id": "event/treasury.funded",
       "type": "event",
       "label": "funded",
-      "summary": "Emitido al fondear la tesorería.",
+      "summary": "Emitted when the treasury is funded.",
       "severity": "info"
     },
     {
       "id": "error/payroll.payrollerror",
       "type": "error",
       "label": "PayrollError",
-      "summary": "5 variantes con discriminantes publicados como ABI — renumerar rompe integraciones.",
+      "summary": "5 variants whose discriminants are published ABI — renumbering one breaks clients without breaking the build.",
       "severity": "warn"
     },
     {
       "id": "deployment/payroll.testnet",
       "type": "deployment",
       "label": "payroll @ testnet",
-      "summary": "⚠ Out of sync: el Wasm desplegado es más viejo que el build local (drift SHA-256).",
+      "summary": "Out of sync: the deployed Wasm is older than the local build.",
       "severity": "warn",
-      "data": { "address": "CA2U…TWRN" }
+      "data": {
+        "address": "CA2U…TWRN"
+      }
     },
     {
       "id": "deployment/treasury.testnet",
       "type": "deployment",
       "label": "treasury @ testnet",
-      "summary": "En sync con el código local.",
+      "summary": "In sync with the local source.",
       "severity": "info",
-      "data": { "address": "CDLZ…YSC" }
+      "data": {
+        "address": "CDLZ…YSC"
+      }
     },
     {
       "id": "note/pay-token-decision",
       "type": "note",
-      "label": "Decisión: token configurable",
-      "summary": "Nota humana: elegimos token configurable por admin en vez de hardcodeado, para rotar el asset sin redeploy. (Las notas humanas nunca las pisa un scan.)",
+      "label": "Decision: configurable pay token",
+      "summary": "Human note: we chose an admin-configurable token instead of hardcoding the SAC, so a testnet asset swap does not need a redeploy.",
       "severity": "info"
     },
     {
       "id": "task/withdraw-tests",
       "type": "task",
-      "label": "□ Completar tests de withdraw",
-      "summary": "Pendiente en README.md:24",
+      "label": "Finish the withdraw tests",
+      "summary": "Open, from README.md:24",
       "severity": "warn"
     },
     {
       "id": "task/pay-e2e",
       "type": "task",
-      "label": "□ Test e2e de pay() con Treasury real",
-      "summary": "Pendiente en payroll/src/test.rs:23",
+      "label": "End-to-end test for pay() with a real Treasury",
+      "summary": "Open, from payroll/src/test.rs:23",
       "severity": "warn"
     }
   ],
   "edges": [
-    { "from": "contract/payroll", "to": "contract/treasury", "type": "calls" },
-    { "from": "contract/payroll", "to": "contract/employee-registry", "type": "reads" },
-    { "from": "contract/payroll", "to": "contract/pay-token", "type": "calls" },
-    { "from": "contract/treasury", "to": "contract/pay-token", "type": "calls" },
-    { "from": "function/payroll.pay", "to": "function/treasury.withdraw", "type": "calls" },
-    { "from": "function/payroll.pay", "to": "function/registry.set_salary", "type": "reads" },
-    { "from": "contract/payroll", "to": "function/payroll.initialize", "type": "notes" },
-    { "from": "contract/payroll", "to": "function/payroll.pay", "type": "notes" },
-    { "from": "contract/payroll", "to": "function/payroll.set_pay_token", "type": "notes" },
-    { "from": "contract/payroll", "to": "function/payroll.last_paid", "type": "notes" },
-    { "from": "contract/treasury", "to": "function/treasury.fund", "type": "notes" },
-    { "from": "contract/treasury", "to": "function/treasury.withdraw", "type": "notes" },
-    { "from": "contract/employee-registry", "to": "function/registry.set_salary", "type": "notes" },
-    { "from": "function/payroll.pay", "to": "storage/payroll.lastpaid", "type": "reads" },
-    { "from": "function/payroll.set_pay_token", "to": "storage/payroll.paytoken", "type": "reads" },
-    { "from": "function/treasury.fund", "to": "storage/treasury.balance", "type": "reads" },
-    { "from": "function/registry.set_salary", "to": "storage/registry.salary", "type": "reads" },
-    { "from": "function/payroll.pay", "to": "event/payroll.paid", "type": "emits" },
-    { "from": "function/treasury.fund", "to": "event/treasury.funded", "type": "emits" },
-    { "from": "function/payroll.pay", "to": "error/payroll.payrollerror", "type": "raises" },
-    { "from": "contract/payroll", "to": "deployment/payroll.testnet", "type": "deployed_as" },
-    { "from": "contract/treasury", "to": "deployment/treasury.testnet", "type": "deployed_as" },
-    { "from": "note/pay-token-decision", "to": "function/payroll.set_pay_token", "type": "notes" },
-    { "from": "task/withdraw-tests", "to": "function/treasury.withdraw", "type": "notes" },
-    { "from": "task/pay-e2e", "to": "function/payroll.pay", "type": "notes" }
+    {
+      "from": "contract/payroll",
+      "to": "contract/treasury",
+      "type": "calls"
+    },
+    {
+      "from": "contract/payroll",
+      "to": "contract/employee-registry",
+      "type": "reads"
+    },
+    {
+      "from": "contract/payroll",
+      "to": "contract/pay-token",
+      "type": "calls"
+    },
+    {
+      "from": "contract/treasury",
+      "to": "contract/pay-token",
+      "type": "calls"
+    },
+    {
+      "from": "function/payroll.pay",
+      "to": "function/treasury.withdraw",
+      "type": "calls"
+    },
+    {
+      "from": "function/payroll.pay",
+      "to": "function/registry.set_salary",
+      "type": "reads"
+    },
+    {
+      "from": "contract/payroll",
+      "to": "function/payroll.initialize",
+      "type": "notes"
+    },
+    {
+      "from": "contract/payroll",
+      "to": "function/payroll.pay",
+      "type": "notes"
+    },
+    {
+      "from": "contract/payroll",
+      "to": "function/payroll.set_pay_token",
+      "type": "notes"
+    },
+    {
+      "from": "contract/payroll",
+      "to": "function/payroll.last_paid",
+      "type": "notes"
+    },
+    {
+      "from": "contract/treasury",
+      "to": "function/treasury.fund",
+      "type": "notes"
+    },
+    {
+      "from": "contract/treasury",
+      "to": "function/treasury.withdraw",
+      "type": "notes"
+    },
+    {
+      "from": "contract/employee-registry",
+      "to": "function/registry.set_salary",
+      "type": "notes"
+    },
+    {
+      "from": "function/payroll.pay",
+      "to": "storage/payroll.lastpaid",
+      "type": "reads"
+    },
+    {
+      "from": "function/payroll.set_pay_token",
+      "to": "storage/payroll.paytoken",
+      "type": "reads"
+    },
+    {
+      "from": "function/treasury.fund",
+      "to": "storage/treasury.balance",
+      "type": "reads"
+    },
+    {
+      "from": "function/registry.set_salary",
+      "to": "storage/registry.salary",
+      "type": "reads"
+    },
+    {
+      "from": "function/payroll.pay",
+      "to": "event/payroll.paid",
+      "type": "emits"
+    },
+    {
+      "from": "function/treasury.fund",
+      "to": "event/treasury.funded",
+      "type": "emits"
+    },
+    {
+      "from": "function/payroll.pay",
+      "to": "error/payroll.payrollerror",
+      "type": "raises"
+    },
+    {
+      "from": "contract/payroll",
+      "to": "deployment/payroll.testnet",
+      "type": "deployed_as"
+    },
+    {
+      "from": "contract/treasury",
+      "to": "deployment/treasury.testnet",
+      "type": "deployed_as"
+    },
+    {
+      "from": "note/pay-token-decision",
+      "to": "function/payroll.set_pay_token",
+      "type": "notes"
+    },
+    {
+      "from": "task/withdraw-tests",
+      "to": "function/treasury.withdraw",
+      "type": "notes"
+    },
+    {
+      "from": "task/pay-e2e",
+      "to": "function/payroll.pay",
+      "type": "notes"
+    }
   ]
 }

@@ -70,8 +70,23 @@ const resume = command(
   'resume',
   summary('Show the project context from the swarm'),
   description('The star view: contracts, functions, risks and human notes, merged across peers.'),
+  flag('--watch|-w', 'keep the view open and repaint as peers write'),
   ...shared(),
-  () => oneShot(resume, commands.resume)()
+  () =>
+    resume.flags.watch ? longRunning(resume, commands.watch)() : oneShot(resume, commands.resume)()
+)
+
+const note = command(
+  'note',
+  summary('Write a human note into the shared graph'),
+  description('Notes are never overwritten by an automatic scan — that is the point of them.'),
+  arg('<text>', 'what you want the team to remember'),
+  flag('--about <id>', 'attach the note to a node id (e.g. contract/payroll)'),
+  ...shared(),
+  () =>
+    oneShot(note, (base) =>
+      commands.note({ ...base, text: note.args.text, about: note.flags.about })
+    )()
 )
 
 const publish = command(
@@ -135,6 +150,7 @@ const root = command(
   flag('--version|-v', 'Print the current version'),
   ...shared(),
   resume,
+  note,
   publish,
   invite,
   join,
